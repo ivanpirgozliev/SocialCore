@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Edit Profile - Update your SocialCore profile information">
+  <title>Edit Profile - SocialCore</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Custom Styles -->
+  <link href="../css/styles.css" rel="stylesheet">
+</head>
+<body>
+  <!-- ============================================
+       Navigation Bar
+       ============================================ -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <!-- Brand Logo -->
+      <a class="navbar-brand" href="../index.html">
+        <img src="../assets/images/logo.svg" alt="SocialCore Logo" height="40">
+        SocialCore
+      </a>
+      
+      <!-- Mobile Toggle Button -->
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <!-- Navigation Links -->
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="../index.html">
+              <i class="bi bi-house-door me-1"></i>Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="feed.html">
+              <i class="bi bi-newspaper me-1"></i>Feed
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="profile.html">
+              <i class="bi bi-person me-1"></i>Profile
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Search Bar -->
+        <form class="d-flex me-3" role="search">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input class="form-control border-start-0" type="search" placeholder="Search..." aria-label="Search">
+          </div>
+        </form>
+        
+        <!-- User Menu -->
+        <div class="dropdown">
+          <button class="btn btn-link text-decoration-none dropdown-toggle" type="button" 
+                  id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
+                 alt="Profile" class="rounded-circle" width="35" height="35">
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================
+       Edit Profile Section
+       ============================================ -->
+  <main class="py-5" style="background-color: var(--gray-50); min-height: calc(100vh - 76px);">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="mb-0">
+          <i class="bi bi-pencil-square me-2 text-primary-blue"></i>Edit Profile
+        </h2>
+        <a href="profile.html" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back to Profile
+        </a>
+      </div>
+      
+      <form id="editProfileForm">
+        <div class="row">
+          <!-- Left Column - Photos -->
+          <div class="col-lg-4 mb-4">
+            <!-- Profile Picture Card -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-camera me-2"></i>Profile Picture</h5>
+              </div>
+              <div class="card-body text-center">
+                <div class="position-relative d-inline-block mb-3">
+                  <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff&size=150" 
+                       alt="Profile Picture" class="rounded-circle" width="150" height="150" id="profilePicturePreview">
+                  <label class="btn btn-primary-gradient btn-sm position-absolute bottom-0 end-0 rounded-circle p-2" 
+                         style="cursor: pointer;">
+                    <i class="bi bi-camera"></i>
+                    <input type="file" class="d-none" id="profilePictureInput" accept="image/*">
+                  </label>
+                </div>
+                <p class="text-muted small mb-2">JPG, PNG or GIF. Max size 2MB.</p>
+                <div class="d-grid gap-2">
+                  <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('profilePictureInput').click()">
+                    <i class="bi bi-upload me-1"></i>Upload New Photo
+                  </button>
+                  <button type="button" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>Remove Photo
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cover Photo Card -->
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-image me-2"></i>Cover Photo</h5>
+              </div>
+              <div class="card-body">
+                <div class="position-relative mb-3" style="height: 120px; border-radius: var(--radius-lg); overflow: hidden;">
+                  <div id="coverPhotoPreview" class="w-100 h-100" 
+                       style="background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);">
+                  </div>
+                  <label class="btn btn-light btn-sm position-absolute bottom-0 end-0 m-2" style="cursor: pointer;">
+                    <i class="bi bi-camera me-1"></i>Change
+                    <input type="file" class="d-none" id="coverPhotoInput" accept="image/*">
+                  </label>
+                </div>
+                <p class="text-muted small mb-0">Recommended: 1500x500 pixels</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column - Information -->
+          <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Basic Information</h5>
+              </div>
+              <div class="card-body">
+                <!-- Name Fields -->
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="firstName" name="firstName" value="John" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="lastName" name="lastName" value="Doe" required>
+                  </div>
+                </div>
+                
+                <!-- Username -->
+                <div class="mb-3">
+                  <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text">@</span>
+                    <input type="text" class="form-control" id="username" name="username" value="johndoe" required>
+                  </div>
+                  <div class="form-text">Only letters, numbers, and underscores. 3-30 characters.</div>
+                </div>
+                
+                <!-- Bio -->
+                <div class="mb-3">
+                  <label for="bio" class="form-label">Bio</label>
+                  <textarea class="form-control" id="bio" name="bio" rows="3" maxlength="160" 
+                            placeholder="Tell us about yourself...">Full-stack developer passionate about building great user experiences. Coffee enthusiast ☕ | Tech lover 💻 | Always learning 📚</textarea>
+                  <div class="d-flex justify-content-between">
+                    <div class="form-text">Write a short bio to introduce yourself.</div>
+                    <small class="text-muted"><span id="bioCharCount">0</span>/160</small>
+                  </div>
+                </div>
+                
+                <!-- Birthday -->
+                <div class="mb-3">
+                  <label for="birthday" class="form-label">Birthday</label>
+                  <input type="date" class="form-control" id="birthday" name="birthday">
+                </div>
+                
+                <!-- Gender -->
+                <div class="mb-0">
+                  <label class="form-label">Gender</label>
+                  <div class="d-flex gap-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="gender" id="genderMale" value="male" checked>
+                      <label class="form-check-label" for="genderMale">Male</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="gender" id="genderFemale" value="female">
+                      <label class="form-check-label" for="genderFemale">Female</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="gender" id="genderOther" value="other">
+                      <label class="form-check-label" for="genderOther">Other</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Contact & Location -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Contact & Location</h5>
+              </div>
+              <div class="card-body">
+                <!-- Location -->
+                <div class="mb-3">
+                  <label for="location" class="form-label">Location</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" class="form-control" id="location" name="location" 
+                           placeholder="City, Country" value="Sofia, Bulgaria">
+                  </div>
+                </div>
+                
+                <!-- Website -->
+                <div class="mb-3">
+                  <label for="website" class="form-label">Website</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-globe"></i></span>
+                    <input type="url" class="form-control" id="website" name="website" 
+                           placeholder="https://yourwebsite.com" value="https://johndoe.dev">
+                  </div>
+                </div>
+                
+                <!-- Phone -->
+                <div class="mb-0">
+                  <label for="phone" class="form-label">Phone Number</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           placeholder="+359 888 123 456">
+                  </div>
+                  <div class="form-text">Only visible to you and your friends.</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Work & Education -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-briefcase me-2"></i>Work & Education</h5>
+              </div>
+              <div class="card-body">
+                <!-- Work -->
+                <div class="mb-3">
+                  <label for="work" class="form-label">Work</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
+                    <input type="text" class="form-control" id="work" name="work" 
+                           placeholder="Job Title at Company" value="Software Developer at TechCorp">
+                  </div>
+                </div>
+                
+                <!-- Education -->
+                <div class="mb-0">
+                  <label for="education" class="form-label">Education</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-mortarboard"></i></span>
+                    <input type="text" class="form-control" id="education" name="education" 
+                           placeholder="School or University" value="Sofia University">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Relationship Status -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-heart me-2"></i>Relationship Status</h5>
+              </div>
+              <div class="card-body">
+                <select class="form-select" id="relationship" name="relationship">
+                  <option value="">Prefer not to say</option>
+                  <option value="single" selected>Single</option>
+                  <option value="in-relationship">In a Relationship</option>
+                  <option value="engaged">Engaged</option>
+                  <option value="married">Married</option>
+                  <option value="complicated">It's Complicated</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Social Links -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Social Links</h5>
+              </div>
+              <div class="card-body">
+                <!-- Facebook -->
+                <div class="mb-3">
+                  <label for="facebook" class="form-label">Facebook</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-facebook"></i></span>
+                    <input type="url" class="form-control" id="facebook" name="facebook" 
+                           placeholder="https://facebook.com/username">
+                  </div>
+                </div>
+                
+                <!-- Twitter/X -->
+                <div class="mb-3">
+                  <label for="twitter" class="form-label">Twitter / X</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-twitter-x"></i></span>
+                    <input type="url" class="form-control" id="twitter" name="twitter" 
+                           placeholder="https://twitter.com/username">
+                  </div>
+                </div>
+                
+                <!-- Instagram -->
+                <div class="mb-3">
+                  <label for="instagram" class="form-label">Instagram</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-instagram"></i></span>
+                    <input type="url" class="form-control" id="instagram" name="instagram" 
+                           placeholder="https://instagram.com/username">
+                  </div>
+                </div>
+                
+                <!-- LinkedIn -->
+                <div class="mb-3">
+                  <label for="linkedin" class="form-label">LinkedIn</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-linkedin"></i></span>
+                    <input type="url" class="form-control" id="linkedin" name="linkedin" 
+                           placeholder="https://linkedin.com/in/username">
+                  </div>
+                </div>
+                
+                <!-- GitHub -->
+                <div class="mb-0">
+                  <label for="github" class="form-label">GitHub</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-github"></i></span>
+                    <input type="url" class="form-control" id="github" name="github" 
+                           placeholder="https://github.com/username">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-end gap-2">
+              <a href="profile.html" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Cancel
+              </a>
+              <button type="submit" class="btn btn-primary-gradient">
+                <i class="bi bi-check-lg me-1"></i>Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Edit Profile JavaScript -->
+  <script type="module" src="../js/edit-profile.js"></script>
+</body>
+</html>

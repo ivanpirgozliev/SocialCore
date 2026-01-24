@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Settings - Customize your SocialCore experience">
+  <title>Settings - SocialCore</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Custom Styles -->
+  <link href="../css/styles.css" rel="stylesheet">
+</head>
+<body>
+  <!-- ============================================
+       Navigation Bar
+       ============================================ -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <!-- Brand Logo -->
+      <a class="navbar-brand" href="../index.html">
+        <img src="../assets/images/logo.svg" alt="SocialCore Logo" height="40">
+        SocialCore
+      </a>
+      
+      <!-- Mobile Toggle Button -->
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <!-- Navigation Links -->
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="../index.html">
+              <i class="bi bi-house-door me-1"></i>Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="feed.html">
+              <i class="bi bi-newspaper me-1"></i>Feed
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="profile.html">
+              <i class="bi bi-person me-1"></i>Profile
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Search Bar -->
+        <form class="d-flex me-3" role="search">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input class="form-control border-start-0" type="search" placeholder="Search..." aria-label="Search">
+          </div>
+        </form>
+        
+        <!-- User Menu -->
+        <div class="dropdown">
+          <button class="btn btn-link text-decoration-none dropdown-toggle" type="button" 
+                  id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
+                 alt="Profile" class="rounded-circle" width="35" height="35">
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item active" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================
+       Settings Section
+       ============================================ -->
+  <main class="py-5" style="background-color: var(--gray-50); min-height: calc(100vh - 76px);">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="mb-0">
+          <i class="bi bi-gear me-2 text-primary-blue"></i>Settings
+        </h2>
+        <a href="profile.html" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back to Profile
+        </a>
+      </div>
+      
+      <div class="row">
+        <!-- Settings Sidebar / Tabs Navigation -->
+        <div class="col-lg-3 mb-4">
+          <div class="card">
+            <div class="card-body p-0">
+              <div class="nav flex-column nav-pills" id="settingsTabs" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active text-start rounded-0 py-3 px-4" id="account-tab" 
+                        data-bs-toggle="pill" data-bs-target="#account-settings" type="button" 
+                        role="tab" aria-controls="account-settings" aria-selected="true">
+                  <i class="bi bi-shield-lock me-2"></i>Account
+                </button>
+                <button class="nav-link text-start rounded-0 py-3 px-4" id="privacy-tab" 
+                        data-bs-toggle="pill" data-bs-target="#privacy-settings" type="button" 
+                        role="tab" aria-controls="privacy-settings" aria-selected="false">
+                  <i class="bi bi-eye me-2"></i>Privacy
+                </button>
+                <button class="nav-link text-start rounded-0 py-3 px-4" id="notifications-tab" 
+                        data-bs-toggle="pill" data-bs-target="#notifications-settings" type="button" 
+                        role="tab" aria-controls="notifications-settings" aria-selected="false">
+                  <i class="bi bi-bell me-2"></i>Notifications
+                </button>
+                <button class="nav-link text-start rounded-0 py-3 px-4" id="appearance-tab" 
+                        data-bs-toggle="pill" data-bs-target="#appearance-settings" type="button" 
+                        role="tab" aria-controls="appearance-settings" aria-selected="false">
+                  <i class="bi bi-palette me-2"></i>Appearance
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Settings Content -->
+        <div class="col-lg-9">
+          <div class="tab-content" id="settingsTabContent">
+            
+            <!-- ============================================
+                 Account Settings Tab
+                 ============================================ -->
+            <div class="tab-pane fade show active" id="account-settings" role="tabpanel" aria-labelledby="account-tab">
+              <form id="accountSettingsForm">
+                <!-- Email Settings -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-envelope me-2"></i>Email Address</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label for="email" class="form-label">Email</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" value="john.doe@example.com">
+                      </div>
+                      <div class="form-text">We'll send a verification email if you change this.</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Password Settings -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lock me-2"></i>Change Password</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label for="currentPassword" class="form-label">Current Password</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="currentPassword" name="currentPassword">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="newPassword" class="form-label">New Password</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <div class="form-text">Must be at least 8 characters long.</div>
+                    </div>
+                    <div class="mb-0">
+                      <label for="confirmNewPassword" class="form-label">Confirm New Password</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="confirmNewPassword" name="confirmNewPassword">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Two-Factor Authentication -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Two-Factor Authentication</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 class="mb-1">Protect your account</h6>
+                        <p class="text-muted small mb-0">Add an extra layer of security to your account.</p>
+                      </div>
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="twoFactorAuth" style="width: 3rem; height: 1.5rem;">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Danger Zone -->
+                <div class="card border-danger mb-4">
+                  <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                      <div>
+                        <h6 class="mb-1">Deactivate Account</h6>
+                        <p class="text-muted small mb-0">Temporarily disable your account.</p>
+                      </div>
+                      <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#deactivateModal">
+                        Deactivate
+                      </button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 class="mb-1">Delete Account</h6>
+                        <p class="text-muted small mb-0">Permanently delete your account and all data.</p>
+                      </div>
+                      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Save Button -->
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                  <button type="submit" class="btn btn-primary-gradient">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- ============================================
+                 Privacy Settings Tab
+                 ============================================ -->
+            <div class="tab-pane fade" id="privacy-settings" role="tabpanel" aria-labelledby="privacy-tab">
+              <form id="privacySettingsForm">
+                <!-- Profile Visibility -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Profile Visibility</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label for="profileVisibility" class="form-label">Who can see your profile?</label>
+                      <select class="form-select" id="profileVisibility" name="profileVisibility">
+                        <option value="everyone" selected>Everyone</option>
+                        <option value="friends">Friends Only</option>
+                        <option value="private">Only Me</option>
+                      </select>
+                    </div>
+                    <div class="mb-0">
+                      <label for="postVisibility" class="form-label">Default post visibility</label>
+                      <select class="form-select" id="postVisibility" name="postVisibility">
+                        <option value="public" selected>Public</option>
+                        <option value="friends">Friends Only</option>
+                        <option value="private">Only Me</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Privacy Options -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Privacy Options</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="showOnlineStatus" checked>
+                      <label class="form-check-label" for="showOnlineStatus">
+                        <strong>Show online status</strong>
+                        <small class="text-muted d-block">Let others see when you're online.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="showLastSeen" checked>
+                      <label class="form-check-label" for="showLastSeen">
+                        <strong>Show last seen</strong>
+                        <small class="text-muted d-block">Let others see when you were last active.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="allowTagging" checked>
+                      <label class="form-check-label" for="allowTagging">
+                        <strong>Allow tagging</strong>
+                        <small class="text-muted d-block">Let others tag you in posts and photos.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="allowMessages" checked>
+                      <label class="form-check-label" for="allowMessages">
+                        <strong>Allow messages from everyone</strong>
+                        <small class="text-muted d-block">Receive messages from people you don't follow.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="showInSearch" checked>
+                      <label class="form-check-label" for="showInSearch">
+                        <strong>Show in search results</strong>
+                        <small class="text-muted d-block">Allow others to find your profile via search.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Blocked Users -->
+                <div class="card mb-4">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-person-x me-2"></i>Blocked Users</h5>
+                    <span class="badge bg-secondary">0 blocked</span>
+                  </div>
+                  <div class="card-body text-center py-4">
+                    <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2 mb-0">You haven't blocked anyone yet.</p>
+                  </div>
+                </div>
+                
+                <!-- Save Button -->
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                  <button type="submit" class="btn btn-primary-gradient">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- ============================================
+                 Notifications Settings Tab
+                 ============================================ -->
+            <div class="tab-pane fade" id="notifications-settings" role="tabpanel" aria-labelledby="notifications-tab">
+              <form id="notificationsSettingsForm">
+                <!-- Push Notifications -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Push Notifications</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="pushEnabled" checked>
+                      <label class="form-check-label" for="pushEnabled">
+                        <strong>Enable push notifications</strong>
+                        <small class="text-muted d-block">Receive notifications on your device.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Activity Notifications -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Activity Notifications</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyLikes" checked>
+                      <label class="form-check-label" for="notifyLikes">
+                        <strong>Likes</strong>
+                        <small class="text-muted d-block">When someone likes your post.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyComments" checked>
+                      <label class="form-check-label" for="notifyComments">
+                        <strong>Comments</strong>
+                        <small class="text-muted d-block">When someone comments on your post.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyShares" checked>
+                      <label class="form-check-label" for="notifyShares">
+                        <strong>Shares</strong>
+                        <small class="text-muted d-block">When someone shares your post.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyMentions" checked>
+                      <label class="form-check-label" for="notifyMentions">
+                        <strong>Mentions</strong>
+                        <small class="text-muted d-block">When someone mentions you.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="notifyTags" checked>
+                      <label class="form-check-label" for="notifyTags">
+                        <strong>Tags</strong>
+                        <small class="text-muted d-block">When someone tags you in a post or photo.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Social Notifications -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Social Notifications</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyFriendRequests" checked>
+                      <label class="form-check-label" for="notifyFriendRequests">
+                        <strong>Friend requests</strong>
+                        <small class="text-muted d-block">When you receive a friend request.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notifyFriendAccepted" checked>
+                      <label class="form-check-label" for="notifyFriendAccepted">
+                        <strong>Friend request accepted</strong>
+                        <small class="text-muted d-block">When someone accepts your friend request.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="notifyMessages" checked>
+                      <label class="form-check-label" for="notifyMessages">
+                        <strong>Messages</strong>
+                        <small class="text-muted d-block">When you receive a new message.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Email Notifications -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-envelope me-2"></i>Email Notifications</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="emailDigest">
+                      <label class="form-check-label" for="emailDigest">
+                        <strong>Weekly digest</strong>
+                        <small class="text-muted d-block">Receive a weekly summary of your activity.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="emailMarketing">
+                      <label class="form-check-label" for="emailMarketing">
+                        <strong>Marketing emails</strong>
+                        <small class="text-muted d-block">Receive updates about new features and offers.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="emailSecurity" checked>
+                      <label class="form-check-label" for="emailSecurity">
+                        <strong>Security alerts</strong>
+                        <small class="text-muted d-block">Important alerts about your account security.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Save Button -->
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                  <button type="submit" class="btn btn-primary-gradient">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- ============================================
+                 Appearance Settings Tab
+                 ============================================ -->
+            <div class="tab-pane fade" id="appearance-settings" role="tabpanel" aria-labelledby="appearance-tab">
+              <form id="appearanceSettingsForm">
+                <!-- Theme -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Theme</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <div class="card h-100 border-2 border-primary" style="cursor: pointer;">
+                          <div class="card-body text-center py-4">
+                            <i class="bi bi-sun text-warning" style="font-size: 2.5rem;"></i>
+                            <h6 class="mt-3 mb-0">Light</h6>
+                            <div class="form-check d-flex justify-content-center mt-2">
+                              <input class="form-check-input" type="radio" name="theme" id="themeLight" value="light" checked>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="card h-100" style="cursor: pointer;">
+                          <div class="card-body text-center py-4">
+                            <i class="bi bi-moon-stars text-primary" style="font-size: 2.5rem;"></i>
+                            <h6 class="mt-3 mb-0">Dark</h6>
+                            <div class="form-check d-flex justify-content-center mt-2">
+                              <input class="form-check-input" type="radio" name="theme" id="themeDark" value="dark">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="card h-100" style="cursor: pointer;">
+                          <div class="card-body text-center py-4">
+                            <i class="bi bi-circle-half text-secondary" style="font-size: 2.5rem;"></i>
+                            <h6 class="mt-3 mb-0">System</h6>
+                            <div class="form-check d-flex justify-content-center mt-2">
+                              <input class="form-check-input" type="radio" name="theme" id="themeSystem" value="system">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Language -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-translate me-2"></i>Language</h5>
+                  </div>
+                  <div class="card-body">
+                    <select class="form-select" id="language" name="language">
+                      <option value="en" selected>English</option>
+                      <option value="bg">Български</option>
+                      <option value="de">Deutsch</option>
+                      <option value="es">Español</option>
+                      <option value="fr">Français</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <!-- Font Size -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-fonts me-2"></i>Font Size</h5>
+                  </div>
+                  <div class="card-body">
+                    <label for="fontSize" class="form-label d-flex justify-content-between">
+                      <span>Adjust text size</span>
+                      <span id="fontSizeValue">Medium</span>
+                    </label>
+                    <input type="range" class="form-range" id="fontSize" min="1" max="5" value="3">
+                    <div class="d-flex justify-content-between text-muted small">
+                      <span>Small</span>
+                      <span>Large</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Accessibility -->
+                <div class="card mb-4">
+                  <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-universal-access me-2"></i>Accessibility</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="reduceMotion">
+                      <label class="form-check-label" for="reduceMotion">
+                        <strong>Reduce motion</strong>
+                        <small class="text-muted d-block">Minimize animations and transitions.</small>
+                      </label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="highContrast">
+                      <label class="form-check-label" for="highContrast">
+                        <strong>High contrast</strong>
+                        <small class="text-muted d-block">Increase contrast for better visibility.</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Save Button -->
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                  <button type="submit" class="btn btn-primary-gradient">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================
+       Deactivate Account Modal
+       ============================================ -->
+  <div class="modal fade" id="deactivateModal" tabindex="-1" aria-labelledby="deactivateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deactivateModalLabel">
+            <i class="bi bi-exclamation-triangle text-warning me-2"></i>Deactivate Account
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to deactivate your account?</p>
+          <ul class="text-muted small">
+            <li>Your profile will be hidden from other users</li>
+            <li>Your posts will not appear in feeds</li>
+            <li>You can reactivate your account anytime by logging in</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning">Deactivate Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       Delete Account Modal
+       ============================================ -->
+  <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="deleteAccountModalLabel">
+            <i class="bi bi-exclamation-triangle me-2"></i>Delete Account
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">
+            <strong>Warning:</strong> This action cannot be undone!
+          </div>
+          <p>Deleting your account will:</p>
+          <ul class="text-muted small">
+            <li>Permanently remove all your data</li>
+            <li>Delete all your posts and comments</li>
+            <li>Remove you from all friend lists</li>
+            <li>Cancel any active subscriptions</li>
+          </ul>
+          <div class="mb-3">
+            <label for="confirmDelete" class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+            <input type="text" class="form-control" id="confirmDelete" placeholder="DELETE">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete My Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Settings JavaScript -->
+  <script type="module" src="../js/settings.js"></script>
+</body>
+</html>

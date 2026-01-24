@@ -15,7 +15,9 @@ export default defineConfig({
         register: resolve(__dirname, 'pages/register.html'),
         feed: resolve(__dirname, 'pages/feed.html'),
         profile: resolve(__dirname, 'pages/profile.html'),
-        createPost: resolve(__dirname, 'pages/create-post.html')
+        createPost: resolve(__dirname, 'pages/create-post.html'),
+        editProfile: resolve(__dirname, 'pages/edit-profile.html'),
+        settings: resolve(__dirname, 'pages/settings.html')
       }
     }
   },
