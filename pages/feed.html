@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SocialCore Feed - See what your friends are sharing.">
+  <title>Feed - SocialCore</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Custom Styles -->
+  <link href="../css/styles.css" rel="stylesheet">
+</head>
+<body>
+  <!-- ============================================
+       Navigation Bar
+       ============================================ -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <!-- Brand Logo -->
+      <a class="navbar-brand" href="../index.html">
+        <img src="../assets/images/logo.svg" alt="SocialCore Logo" height="40">
+        SocialCore
+      </a>
+      
+      <!-- Mobile Toggle Button -->
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <!-- Navigation Links -->
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="../index.html">
+              <i class="bi bi-house-door me-1"></i>Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="feed.html">
+              <i class="bi bi-newspaper me-1"></i>Feed
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="profile.html">
+              <i class="bi bi-person me-1"></i>Profile
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Search Bar -->
+        <form class="d-flex me-3" role="search">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input class="form-control border-start-0" type="search" placeholder="Search..." aria-label="Search">
+          </div>
+        </form>
+        
+        <!-- User Menu -->
+        <div class="dropdown">
+          <button class="btn btn-link text-decoration-none dropdown-toggle" type="button" 
+                  id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
+                 alt="Profile" class="rounded-circle" width="35" height="35">
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================
+       Main Content
+       ============================================ -->
+  <main class="py-4">
+    <div class="container">
+      <div class="row">
+        <!-- Left Sidebar -->
+        <div class="col-lg-3 d-none d-lg-block">
+          <div class="sidebar">
+            <!-- User Info Card -->
+            <div class="sidebar-card text-center">
+              <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff&size=80" 
+                   alt="Profile" class="rounded-circle mb-3" width="80" height="80">
+              <h6 class="mb-1">John Doe</h6>
+              <p class="text-muted small mb-3">@johndoe</p>
+              <a href="profile.html" class="btn btn-outline-primary btn-sm w-100">View Profile</a>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <div class="sidebar-card">
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <a href="feed.html" class="d-flex align-items-center text-decoration-none text-primary-blue">
+                    <i class="bi bi-house-door me-2"></i>Feed
+                  </a>
+                </li>
+                <li class="mb-2">
+                  <a href="#" class="d-flex align-items-center text-decoration-none text-muted">
+                    <i class="bi bi-people me-2"></i>Friends
+                  </a>
+                </li>
+                <li class="mb-2">
+                  <a href="#" class="d-flex align-items-center text-decoration-none text-muted">
+                    <i class="bi bi-bookmark me-2"></i>Saved Posts
+                  </a>
+                </li>
+                <li class="mb-2">
+                  <a href="#" class="d-flex align-items-center text-decoration-none text-muted">
+                    <i class="bi bi-collection me-2"></i>Groups
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="d-flex align-items-center text-decoration-none text-muted">
+                    <i class="bi bi-calendar-event me-2"></i>Events
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Main Feed -->
+        <div class="col-lg-6">
+          <!-- Create Post Card -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
+                     alt="Profile" class="rounded-circle" width="45" height="45">
+                <div class="flex-grow-1">
+                  <a href="create-post.html" class="form-control bg-light text-muted text-decoration-none d-block" 
+                     style="cursor: pointer; padding: 12px 16px;">
+                    What's on your mind, John?
+                  </a>
+                </div>
+              </div>
+              <hr>
+              <div class="d-flex justify-content-around">
+                <a href="create-post.html" class="btn btn-link text-decoration-none text-muted">
+                  <i class="bi bi-image text-success me-1"></i>Photo
+                </a>
+                <a href="create-post.html" class="btn btn-link text-decoration-none text-muted">
+                  <i class="bi bi-camera-video text-danger me-1"></i>Video
+                </a>
+                <a href="create-post.html" class="btn btn-link text-decoration-none text-muted">
+                  <i class="bi bi-emoji-smile text-warning me-1"></i>Feeling
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Posts Feed -->
+          <div id="postsFeed">
+            <!-- Post 1 -->
+            <article class="post-card">
+              <div class="post-header">
+                <img src="https://ui-avatars.com/api/?name=Sarah+Wilson&background=06B6D4&color=fff" 
+                     alt="Sarah Wilson" class="post-avatar">
+                <div>
+                  <a href="profile.html" class="post-author text-decoration-none">Sarah Wilson</a>
+                  <p class="post-time mb-0">2 hours ago</p>
+                </div>
+                <div class="ms-auto">
+                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="post-content">
+                <p>Just finished working on an amazing new project! 🚀 So excited to share it with everyone soon. Sometimes the best things take time, and this one was definitely worth the wait!</p>
+              </div>
+              <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800" alt="Workspace" class="post-image">
+              <div class="post-actions">
+                <button class="post-action-btn" data-action="like">
+                  <i class="bi bi-heart"></i>
+                  <span>128</span>
+                </button>
+                <button class="post-action-btn" data-action="comment">
+                  <i class="bi bi-chat"></i>
+                  <span>24</span>
+                </button>
+                <button class="post-action-btn" data-action="share">
+                  <i class="bi bi-share"></i>
+                  <span>Share</span>
+                </button>
+              </div>
+            </article>
+            
+            <!-- Post 2 -->
+            <article class="post-card">
+              <div class="post-header">
+                <img src="https://ui-avatars.com/api/?name=Mike+Johnson&background=3B82F6&color=fff" 
+                     alt="Mike Johnson" class="post-avatar">
+                <div>
+                  <a href="profile.html" class="post-author text-decoration-none">Mike Johnson</a>
+                  <p class="post-time mb-0">5 hours ago</p>
+                </div>
+                <div class="ms-auto">
+                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="post-content">
+                <p>Coffee and coding - the perfect combination for a productive morning! ☕💻</p>
+                <p>What's your favorite programming fuel?</p>
+              </div>
+              <div class="post-actions">
+                <button class="post-action-btn" data-action="like">
+                  <i class="bi bi-heart"></i>
+                  <span>86</span>
+                </button>
+                <button class="post-action-btn" data-action="comment">
+                  <i class="bi bi-chat"></i>
+                  <span>42</span>
+                </button>
+                <button class="post-action-btn" data-action="share">
+                  <i class="bi bi-share"></i>
+                  <span>Share</span>
+                </button>
+              </div>
+            </article>
+            
+            <!-- Post 3 -->
+            <article class="post-card">
+              <div class="post-header">
+                <img src="https://ui-avatars.com/api/?name=Emily+Chen&background=10B981&color=fff" 
+                     alt="Emily Chen" class="post-avatar">
+                <div>
+                  <a href="profile.html" class="post-author text-decoration-none">Emily Chen</a>
+                  <p class="post-time mb-0">Yesterday</p>
+                </div>
+                <div class="ms-auto">
+                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="post-content">
+                <p>Beautiful sunset at the beach today! 🌅 Nature always finds a way to remind us to slow down and appreciate the little things.</p>
+              </div>
+              <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800" alt="Beach sunset" class="post-image">
+              <div class="post-actions">
+                <button class="post-action-btn liked" data-action="like">
+                  <i class="bi bi-heart-fill"></i>
+                  <span>256</span>
+                </button>
+                <button class="post-action-btn" data-action="comment">
+                  <i class="bi bi-chat"></i>
+                  <span>67</span>
+                </button>
+                <button class="post-action-btn" data-action="share">
+                  <i class="bi bi-share"></i>
+                  <span>Share</span>
+                </button>
+              </div>
+            </article>
+          </div>
+          
+          <!-- Load More -->
+          <div class="text-center py-4">
+            <button class="btn btn-outline-primary" id="loadMoreBtn">
+              <i class="bi bi-arrow-down-circle me-2"></i>Load More Posts
+            </button>
+          </div>
+        </div>
+        
+        <!-- Right Sidebar -->
+        <div class="col-lg-3 d-none d-lg-block">
+          <div class="sidebar">
+            <!-- Friend Suggestions -->
+            <div class="sidebar-card">
+              <h6 class="sidebar-title">
+                <i class="bi bi-person-plus me-2"></i>People You May Know
+              </h6>
+              <div class="friend-item">
+                <img src="https://ui-avatars.com/api/?name=Alex+Brown&background=F59E0B&color=fff" 
+                     alt="Alex Brown" class="friend-avatar">
+                <div class="flex-grow-1">
+                  <p class="friend-name mb-0">Alex Brown</p>
+                  <small class="text-muted">5 mutual friends</small>
+                </div>
+                <button class="btn btn-primary-gradient btn-sm">Add</button>
+              </div>
+              <div class="friend-item">
+                <img src="https://ui-avatars.com/api/?name=Lisa+Park&background=EF4444&color=fff" 
+                     alt="Lisa Park" class="friend-avatar">
+                <div class="flex-grow-1">
+                  <p class="friend-name mb-0">Lisa Park</p>
+                  <small class="text-muted">3 mutual friends</small>
+                </div>
+                <button class="btn btn-primary-gradient btn-sm">Add</button>
+              </div>
+              <div class="friend-item">
+                <img src="https://ui-avatars.com/api/?name=Tom+Davis&background=8B5CF6&color=fff" 
+                     alt="Tom Davis" class="friend-avatar">
+                <div class="flex-grow-1">
+                  <p class="friend-name mb-0">Tom Davis</p>
+                  <small class="text-muted">8 mutual friends</small>
+                </div>
+                <button class="btn btn-primary-gradient btn-sm">Add</button>
+              </div>
+            </div>
+            
+            <!-- Trending Topics -->
+            <div class="sidebar-card">
+              <h6 class="sidebar-title">
+                <i class="bi bi-fire me-2"></i>Trending Now
+              </h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <a href="#" class="text-decoration-none">
+                    <span class="text-primary-blue">#WebDevelopment</span>
+                    <br><small class="text-muted">2.5k posts</small>
+                  </a>
+                </li>
+                <li class="mb-2">
+                  <a href="#" class="text-decoration-none">
+                    <span class="text-primary-blue">#JavaScript</span>
+                    <br><small class="text-muted">1.8k posts</small>
+                  </a>
+                </li>
+                <li class="mb-2">
+                  <a href="#" class="text-decoration-none">
+                    <span class="text-primary-blue">#TechNews</span>
+                    <br><small class="text-muted">950 posts</small>
+                  </a>
+                </li>
+                <li>
+                  <a href="#" class="text-decoration-none">
+                    <span class="text-primary-blue">#DesignTips</span>
+                    <br><small class="text-muted">720 posts</small>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            <!-- Footer Links -->
+            <div class="sidebar-card">
+              <small class="text-muted">
+                <a href="#" class="text-muted text-decoration-none">About</a> · 
+                <a href="#" class="text-muted text-decoration-none">Privacy</a> · 
+                <a href="#" class="text-muted text-decoration-none">Terms</a> · 
+                <a href="#" class="text-muted text-decoration-none">Help</a>
+                <br>© 2026 SocialCore
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Feed JavaScript -->
+  <script type="module" src="../js/feed.js"></script>
+</body>
+</html>
