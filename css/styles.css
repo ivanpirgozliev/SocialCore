@@ -8,27 +8,27 @@
    ============================================ */
 :root {
   /* Primary Colors */
-  --primary-blue: #3B82F6;
-  --primary-cyan: #06B6D4;
-  --primary-gradient: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
+  --primary-blue: #2563EB;
+  --primary-cyan: #0891B2;
+  --primary-gradient: linear-gradient(135deg, #2563EB 0%, #0891B2 100%);
   
   /* Neutral Colors */
-  --gray-50: #F8FAFC;
-  --gray-100: #F1F5F9;
-  --gray-200: #E2E8F0;
-  --gray-300: #CBD5E1;
-  --gray-400: #94A3B8;
-  --gray-500: #64748B;
-  --gray-600: #475569;
-  --gray-700: #334155;
-  --gray-800: #1E293B;
-  --gray-900: #0F172A;
+  --gray-50: #F1F5F9;
+  --gray-100: #E2E8F0;
+  --gray-200: #CBD5E1;
+  --gray-300: #94A3B8;
+  --gray-400: #64748B;
+  --gray-500: #475569;
+  --gray-600: #334155;
+  --gray-700: #1E293B;
+  --gray-800: #0F172A;
+  --gray-900: #020617;
   
   /* Semantic Colors */
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  --info: #3B82F6;
+  --success: #059669;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --info: #2563EB;
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -45,11 +45,11 @@
   --radius-xl: 1rem;
   --radius-full: 9999px;
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Shadows - по-силни */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.15), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -98,9 +98,10 @@ h1, h2, h3, h4, h5, h6 {
    Navbar Styles
    ============================================ */
 .navbar {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--gray-200);
   padding: var(--spacing-sm) 0;
   transition: var(--transition-normal);
 }
@@ -176,21 +177,24 @@ h1, h2, h3, h4, h5, h6 {
    Card Styles
    ============================================ */
 .card {
-  border: none;
+  border: 1px solid var(--gray-200);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   transition: var(--transition-normal);
   overflow: hidden;
+  background-color: white;
 }
 
 .card:hover {
   box-shadow: var(--shadow-lg);
+  border-color: var(--gray-300);
 }
 
 .card-header {
-  background-color: white;
+  background-color: var(--gray-50);
   border-bottom: 1px solid var(--gray-200);
   padding: var(--spacing-md) var(--spacing-lg);
+  font-weight: 600;
 }
 
 .card-body {
@@ -523,10 +527,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar-card {
   background: white;
+  border: 1px solid var(--gray-200);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+}
+
+.sidebar-card:hover {
+  border-color: var(--gray-300);
 }
 
 .sidebar-title {
@@ -701,4 +710,159 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-pulse {
   animation: pulse 2s infinite;
+}
+
+/* ============================================
+   Enhanced Form Styles
+   ============================================ */
+.form-control {
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  transition: var(--transition-fast);
+  background-color: #FAFBFC;
+}
+
+.form-control:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background-color: white;
+}
+
+.form-control:hover:not(:focus) {
+  border-color: var(--gray-300);
+}
+
+.form-select {
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  transition: var(--transition-fast);
+  background-color: #FAFBFC;
+}
+
+.form-select:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background-color: white;
+}
+
+.input-group-text {
+  border: 2px solid var(--gray-200);
+  background-color: var(--gray-100);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.input-group .form-control {
+  border-left: none;
+}
+
+.input-group .form-control:focus {
+  border-left: none;
+}
+
+.input-group:focus-within .input-group-text {
+  border-color: var(--primary-blue);
+  background-color: var(--gray-50);
+}
+
+/* ============================================
+   Nav Pills (Settings Tabs) Enhancement
+   ============================================ */
+.nav-pills .nav-link {
+  color: var(--gray-600);
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: var(--transition-fast);
+}
+
+.nav-pills .nav-link:hover {
+  color: var(--primary-blue);
+  background-color: var(--gray-100);
+  border-left-color: var(--gray-300);
+}
+
+.nav-pills .nav-link.active {
+  color: var(--primary-blue);
+  background-color: rgba(37, 99, 235, 0.1);
+  border-left-color: var(--primary-blue);
+  font-weight: 600;
+}
+
+/* ============================================
+   Form Switch Enhancement
+   ============================================ */
+.form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+  border: 2px solid var(--gray-300);
+  background-color: var(--gray-200);
+  cursor: pointer;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-blue);
+  border-color: var(--primary-blue);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* ============================================
+   Section Headers Enhancement
+   ============================================ */
+.card-header h5 {
+  color: var(--gray-800);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.card-header h5 i {
+  color: var(--primary-blue);
+}
+
+/* ============================================
+   Label Enhancement
+   ============================================ */
+.form-label {
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+}
+
+.form-text {
+  color: var(--gray-500);
+  font-size: 0.8125rem;
+}
+
+/* ============================================
+   Alert Enhancement
+   ============================================ */
+.alert {
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+
+.alert-danger {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border-left: 4px solid var(--danger);
+}
+
+.alert-success {
+  background-color: #D1FAE5;
+  color: #065F46;
+  border-left: 4px solid var(--success);
+}
+
+/* ============================================
+   Badge Enhancement
+   ============================================ */
+.badge {
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
 }
