@@ -636,11 +636,38 @@ h1, h2, h3, h4, h5, h6 {
   .profile-stats {
     gap: var(--spacing-lg);
   }
+  
+  /* Mobile Navigation Auth Buttons */
+  .navbar-collapse .d-flex.gap-2 {
+    flex-direction: column;
+    width: 100%;
+    padding: var(--spacing-md) 0;
+    gap: var(--spacing-sm) !important;
+  }
+  
+  .navbar-collapse .d-flex.gap-2 .btn {
+    width: 100%;
+    text-align: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    justify-content: center;
+  }
 }
 
 @media (max-width: 767.98px) {
   .hero-title {
     font-size: 2rem;
+  }
+  
+  /* Hero Section Buttons - Mobile */
+  .hero-content .d-flex.gap-3 {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .hero-content .d-flex.gap-3 .btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
   }
   
   .hero-subtitle {
