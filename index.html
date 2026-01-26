@@ -13,7 +13,30 @@
   <!-- Custom Styles -->
   <link href="./css/styles.css" rel="stylesheet">
 </head>
-<body>
+<body class="homepage-with-video">
+  <!-- ============================================
+       Video Background (Homepage only)
+       ============================================ -->
+  <div class="video-background">
+    <video 
+      id="hero-video"
+      class="video-background__video"
+      autoplay 
+      muted 
+      loop 
+      playsinline
+      preload="auto"
+      poster="./assets/images/video-poster.jpg"
+    >
+      <!-- Use a royalty-free video URL or local file -->
+      <!-- Example: city timelapse, people walking, abstract motion -->
+      <source src="https://assets.mixkit.co/videos/preview/mixkit-people-walking-in-a-city-4394-large.mp4" type="video/mp4">
+      <!-- Fallback message -->
+      Your browser does not support the video tag.
+    </video>
+    <div class="video-background__overlay"></div>
+  </div>
+
   <!-- ============================================
        Navigation Bar
        ============================================ -->
@@ -298,5 +321,18 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Main JavaScript -->
   <script type="module" src="./js/main.js"></script>
+  
+  <!-- Video Background Controller (Homepage only) -->
+  <script type="module">
+    import { initVideoBackground } from './js/video-background.js';
+    
+    // Initialize after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      const video = document.getElementById('hero-video');
+      if (video) {
+        initVideoBackground(video);
+      }
+    });
+  </script>
 </body>
 </html>
