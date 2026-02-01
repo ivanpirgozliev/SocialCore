@@ -64,8 +64,44 @@ function updateProfileUI(profile) {
   
   // Update bio
   const bioElement = document.querySelector('.profile-info p:not(.text-muted)');
-  if (bioElement && profile.bio) {
-    bioElement.textContent = profile.bio;
+  if (bioElement) {
+    if (profile.bio) {
+      bioElement.textContent = profile.bio;
+    } else {
+      bioElement.textContent = 'No bio yet.';
+      bioElement.classList.add('text-muted');
+    }
+  }
+  
+  // Update location and website in About section
+  if (profile.location) {
+    const locationElement = document.querySelector('.sidebar-card p:has(i.bi-geo-alt)');
+    if (locationElement) {
+      const locationText = document.createTextNode(profile.location);
+      const icon = document.createElement('i');
+      icon.className = 'bi bi-geo-alt me-2';
+      locationElement.textContent = '';
+      locationElement.appendChild(icon);
+      locationElement.appendChild(locationText);
+    }
+  }
+  
+  if (profile.website) {
+    const websiteElement = document.querySelector('.sidebar-card p:has(i.bi-link-45deg)');
+    if (websiteElement) {
+      const websiteUrl = profile.website;
+      const displayText = websiteUrl.replace(/^https?:\/\//, '');
+      const icon = document.createElement('i');
+      icon.className = 'bi bi-link-45deg me-2';
+      const link = document.createElement('a');
+      link.href = websiteUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = displayText;
+      websiteElement.textContent = '';
+      websiteElement.appendChild(icon);
+      websiteElement.appendChild(link);
+    }
   }
   
   // Update avatar
@@ -225,7 +261,31 @@ function initProfileActions() {
 /**
  * Open edit profile modal
  */
-function openEditProfileModal() {
+async function openEditProfileModal() {
+  const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+  
+  // Get profile data from Supabase
+  let profile = null;
+  try {
+    profile = await getProfile(userData.id);
+  } catch (error) {
+    console.error('Error loading profile:', error);
+  }
+  
+  // Split full name and escape for HTML
+  const nameParts = (profile?.full_name || userData.name || '').split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+  
+  // Prepare safe values for HTML
+  const safeFirstName = firstName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const safeLastName = lastName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const safeUsername = (profile?.username || userData.username || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const safeBio = (profile?.bio || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeLocation = (profile?.location || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const safeWebsite = (profile?.website || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const avatarUrl = profile?.avatar_url || userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=100';
+  
   // Check if modal already exists
   let editModal = document.getElementById('editProfileModal');
   
@@ -245,13 +305,14 @@ function openEditProfileModal() {
             <form id="editProfileForm">
               <!-- Profile Picture -->
               <div class="text-center mb-4">
-                <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff&size=100" 
+                <img src="${avatarUrl}" 
                      alt="Profile" class="rounded-circle mb-2" width="100" height="100">
                 <div>
                   <label class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-camera me-1"></i>Change Photo
                     <input type="file" accept="image/*" class="d-none" id="profilePhotoInput">
                   </label>
+                  <small class="d-block text-muted mt-1">Photo upload coming soon</small>
                 </div>
               </div>
               
@@ -259,11 +320,11 @@ function openEditProfileModal() {
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label class="form-label">First Name</label>
-                  <input type="text" class="form-control" id="editFirstName" value="John">
+                  <input type="text" class="form-control" id="editFirstName" value="${safeFirstName}" required>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Last Name</label>
-                  <input type="text" class="form-control" id="editLastName" value="Doe">
+                  <input type="text" class="form-control" id="editLastName" value="${safeLastName}">
                 </div>
               </div>
               
@@ -272,27 +333,27 @@ function openEditProfileModal() {
                 <label class="form-label">Username</label>
                 <div class="input-group">
                   <span class="input-group-text">@</span>
-                  <input type="text" class="form-control" id="editUsername" value="johndoe">
+                  <input type="text" class="form-control" id="editUsername" value="${safeUsername}" required pattern="[a-zA-Z0-9_]+" title="Only letters, numbers and underscores allowed">
                 </div>
               </div>
               
               <!-- Bio -->
               <div class="mb-3">
                 <label class="form-label">Bio</label>
-                <textarea class="form-control" id="editBio" rows="3" maxlength="160">Full-stack developer passionate about building great user experiences. Coffee enthusiast ☕ | Tech lover 💻 | Always learning 📚</textarea>
-                <small class="text-muted"><span id="bioCharCount">160</span>/160 characters</small>
+                <textarea class="form-control" id="editBio" rows="3" maxlength="160">${safeBio}</textarea>
+                <small class="text-muted"><span id="bioCharCount">${safeBio.length}</span>/160 characters</small>
               </div>
               
               <!-- Location -->
               <div class="mb-3">
                 <label class="form-label">Location</label>
-                <input type="text" class="form-control" id="editLocation" value="Sofia, Bulgaria">
+                <input type="text" class="form-control" id="editLocation" value="${safeLocation}" placeholder="City, Country">
               </div>
               
               <!-- Website -->
               <div class="mb-3">
                 <label class="form-label">Website</label>
-                <input type="url" class="form-control" id="editWebsite" placeholder="https://yourwebsite.com">
+                <input type="url" class="form-control" id="editWebsite" value="${safeWebsite}" placeholder="https://yourwebsite.com">
               </div>
             </form>
           </div>
@@ -310,9 +371,9 @@ function openEditProfileModal() {
     const charCount = editModal.querySelector('#bioCharCount');
     
     bioTextarea.addEventListener('input', () => {
-      const remaining = 160 - bioTextarea.value.length;
-      charCount.textContent = remaining;
-      charCount.className = remaining < 20 ? 'text-danger' : 'text-muted';
+      const length = bioTextarea.value.length;
+      charCount.textContent = length;
+      charCount.parentElement.className = length > 140 ? 'text-danger' : 'text-muted';
     });
 
     const saveBtn = editModal.querySelector('#saveProfileBtn');
@@ -326,6 +387,8 @@ function openEditProfileModal() {
   const modal = new bootstrap.Modal(editModal);
   modal.show();
 }
+  modal.show();
+}
 
 /**
  * Save profile changes
@@ -337,6 +400,8 @@ async function saveProfile() {
     full_name: `${document.getElementById('editFirstName')?.value || ''} ${document.getElementById('editLastName')?.value || ''}`.trim(),
     username: document.getElementById('editUsername')?.value,
     bio: document.getElementById('editBio')?.value,
+    location: document.getElementById('editLocation')?.value || null,
+    website: document.getElementById('editWebsite')?.value || null,
   };
 
   try {
