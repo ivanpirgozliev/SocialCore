@@ -387,8 +387,6 @@ async function openEditProfileModal() {
   const modal = new bootstrap.Modal(editModal);
   modal.show();
 }
-  modal.show();
-}
 
 /**
  * Save profile changes
