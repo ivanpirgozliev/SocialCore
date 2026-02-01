@@ -299,17 +299,6 @@ function initProfileActions() {
     });
   }
 }
-    });
-  }
-
-  // Edit cover button
-  const editCoverBtn = document.querySelector('.profile-cover .btn');
-  if (editCoverBtn) {
-    editCoverBtn.addEventListener('click', () => {
-      showToast('Cover photo upload coming soon!', 'info');
-    });
-  }
-}
 
 /**
  * Open edit profile modal

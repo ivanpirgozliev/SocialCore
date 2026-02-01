@@ -67,7 +67,6 @@ function initCreatePostForm() {
       setTimeout(() => {
         window.location.href = 'feed.html';
       }, 1500);
-      }, 1500);
     } catch (error) {
       showToast(error.message || 'Failed to create post. Please try again.', 'error');
       submitBtn.disabled = false;
