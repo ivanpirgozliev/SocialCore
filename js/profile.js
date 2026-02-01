@@ -62,14 +62,28 @@ function updateProfileUI(profile) {
   const usernameElement = document.querySelector('.profile-info p.text-muted');
   if (usernameElement) usernameElement.textContent = `@${profile.username}`;
   
-  // Update bio
-  const bioElement = document.querySelector('.profile-info p:not(.text-muted)');
-  if (bioElement) {
+  // Remove the hardcoded location/work line (third paragraph)
+  const profileInfo = document.querySelector('.profile-info');
+  if (profileInfo) {
+    const allParagraphs = profileInfo.querySelectorAll('p');
+    // Remove the paragraph with location/work info (usually 3rd p tag)
+    if (allParagraphs[2]) {
+      allParagraphs[2].remove();
+    }
+  }
+  
+  // Update bio (should be the last paragraph before buttons, now 3rd after removal)
+  const bioParagraphs = document.querySelectorAll('.profile-info p');
+  let bioElement = bioParagraphs[bioParagraphs.length - 1]; // Get last paragraph
+  
+  // Make sure we're not selecting the username paragraph
+  if (bioElement && !bioElement.classList.contains('text-muted')) {
     if (profile.bio) {
       bioElement.textContent = profile.bio;
+      bioElement.className = 'mb-3'; // Reset classes
     } else {
       bioElement.textContent = 'No bio yet.';
-      bioElement.classList.add('text-muted');
+      bioElement.className = 'mb-3 text-muted';
     }
   }
   
