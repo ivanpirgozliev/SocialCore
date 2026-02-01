@@ -73,34 +73,52 @@ function updateProfileUI(profile) {
     }
   }
   
-  // Update location and website in About section
-  if (profile.location) {
-    const locationElement = document.querySelector('.sidebar-card p:has(i.bi-geo-alt)');
-    if (locationElement) {
-      const locationText = document.createTextNode(profile.location);
-      const icon = document.createElement('i');
-      icon.className = 'bi bi-geo-alt me-2';
-      locationElement.textContent = '';
-      locationElement.appendChild(icon);
-      locationElement.appendChild(locationText);
+  // Update About section in sidebar
+  const aboutList = document.querySelector('.card-body ul.list-unstyled');
+  if (aboutList) {
+    // Clear existing content
+    aboutList.innerHTML = '';
+    
+    // Add location if exists
+    if (profile.location) {
+      const locationLi = document.createElement('li');
+      locationLi.className = 'mb-2 d-flex align-items-center';
+      locationLi.innerHTML = `
+        <i class="bi bi-geo-alt me-3 text-muted"></i>
+        <span>Lives in <strong>${escapeHtml(profile.location)}</strong></span>
+      `;
+      aboutList.appendChild(locationLi);
     }
-  }
-  
-  if (profile.website) {
-    const websiteElement = document.querySelector('.sidebar-card p:has(i.bi-link-45deg)');
-    if (websiteElement) {
+    
+    // Add website if exists
+    if (profile.website) {
+      const websiteLi = document.createElement('li');
+      websiteLi.className = 'mb-2 d-flex align-items-center';
       const websiteUrl = profile.website;
       const displayText = websiteUrl.replace(/^https?:\/\//, '');
-      const icon = document.createElement('i');
-      icon.className = 'bi bi-link-45deg me-2';
-      const link = document.createElement('a');
-      link.href = websiteUrl;
-      link.target = '_blank';
-      link.rel = 'noopener';
-      link.textContent = displayText;
-      websiteElement.textContent = '';
-      websiteElement.appendChild(icon);
-      websiteElement.appendChild(link);
+      websiteLi.innerHTML = `
+        <i class="bi bi-link-45deg me-3 text-muted"></i>
+        <a href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener">${escapeHtml(displayText)}</a>
+      `;
+      aboutList.appendChild(websiteLi);
+    }
+    
+    // Add joined date
+    if (profile.created_at) {
+      const joinedLi = document.createElement('li');
+      joinedLi.className = 'd-flex align-items-center';
+      const joinedDate = new Date(profile.created_at);
+      const formattedDate = joinedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      joinedLi.innerHTML = `
+        <i class="bi bi-calendar3 me-3 text-muted"></i>
+        <span>Joined <strong>${formattedDate}</strong></span>
+      `;
+      aboutList.appendChild(joinedLi);
+    }
+    
+    // If no data to show, display a message
+    if (aboutList.children.length === 0) {
+      aboutList.innerHTML = '<li class="text-muted text-center">No information added yet.</li>';
     }
   }
   
