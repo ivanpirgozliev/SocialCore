@@ -4,3 +4,5 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  VITE_SUPABASE_URL = "https://nyrftrwrqcgglrprwuqz.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55cmZ0cndycWNnZ2xycHJ3dXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NDQwNDUsImV4cCI6MjA4NTQyMDA0NX0.0Q2cqiL6S14gPiTRKIOlmEczT3ejLSBJgRE5NwylpkA"
