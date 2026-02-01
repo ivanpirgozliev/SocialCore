@@ -321,7 +321,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================ */
 .profile-cover {
   height: 200px;
-  background: var(--primary-gradient);
+  background: #B8dde7;
   position: relative;
 }
 
