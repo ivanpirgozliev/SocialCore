@@ -5,38 +5,10 @@
 
 import { showToast, formatRelativeTime } from './main.js';
 
-// Sample data - will be replaced with Supabase
-const mockFriends = [
-  { id: 1, name: 'Sarah Wilson', username: 'sarahw', mutualFriends: 12, avatar: 'https://ui-avatars.com/api/?name=Sarah+Wilson&background=06B6D4&color=fff' },
-  { id: 2, name: 'Mike Johnson', username: 'mikej', mutualFriends: 8, avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=3B82F6&color=fff' },
-  { id: 3, name: 'Emily Davis', username: 'emilyd', mutualFriends: 15, avatar: 'https://ui-avatars.com/api/?name=Emily+Davis&background=8B5CF6&color=fff' },
-  { id: 4, name: 'Alex Brown', username: 'alexb', mutualFriends: 5, avatar: 'https://ui-avatars.com/api/?name=Alex+Brown&background=F59E0B&color=fff' },
-  { id: 5, name: 'Lisa Park', username: 'lisap', mutualFriends: 3, avatar: 'https://ui-avatars.com/api/?name=Lisa+Park&background=EF4444&color=fff' },
-  { id: 6, name: 'Tom Davis', username: 'tomd', mutualFriends: 8, avatar: 'https://ui-avatars.com/api/?name=Tom+Davis&background=8B5CF6&color=fff' },
-  { id: 7, name: 'Jessica Lee', username: 'jessical', mutualFriends: 10, avatar: 'https://ui-avatars.com/api/?name=Jessica+Lee&background=EC4899&color=fff' },
-  { id: 8, name: 'Robert Chen', username: 'robertc', mutualFriends: 6, avatar: 'https://ui-avatars.com/api/?name=Robert+Chen&background=10B981&color=fff' },
-  { id: 9, name: 'Maria Garcia', username: 'mariag', mutualFriends: 14, avatar: 'https://ui-avatars.com/api/?name=Maria+Garcia&background=F59E0B&color=fff' },
-  { id: 10, name: 'David Kim', username: 'davidk', mutualFriends: 9, avatar: 'https://ui-avatars.com/api/?name=David+Kim&background=3B82F6&color=fff' },
-  { id: 11, name: 'Sophie Turner', username: 'sophiet', mutualFriends: 7, avatar: 'https://ui-avatars.com/api/?name=Sophie+Turner&background=EC4899&color=fff' },
-  { id: 12, name: 'James Miller', username: 'jamesm', mutualFriends: 11, avatar: 'https://ui-avatars.com/api/?name=James+Miller&background=8B5CF6&color=fff' },
-  { id: 13, name: 'Olivia White', username: 'oliviaw', mutualFriends: 4, avatar: 'https://ui-avatars.com/api/?name=Olivia+White&background=06B6D4&color=fff' },
-  { id: 14, name: 'Daniel Martinez', username: 'danielm', mutualFriends: 13, avatar: 'https://ui-avatars.com/api/?name=Daniel+Martinez&background=10B981&color=fff' },
-  { id: 15, name: 'Emma Thompson', username: 'emmat', mutualFriends: 6, avatar: 'https://ui-avatars.com/api/?name=Emma+Thompson&background=EF4444&color=fff' },
-  { id: 16, name: 'Chris Anderson', username: 'chrisa', mutualFriends: 9, avatar: 'https://ui-avatars.com/api/?name=Chris+Anderson&background=3B82F6&color=fff' },
-];
-
-const mockRequests = [
-  { id: 1, name: 'Jessica Lee', username: 'jessical', mutualFriends: 7, avatar: 'https://ui-avatars.com/api/?name=Jessica+Lee&background=EC4899&color=fff', time: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-  { id: 2, name: 'Robert Chen', username: 'robertc', mutualFriends: 4, avatar: 'https://ui-avatars.com/api/?name=Robert+Chen&background=10B981&color=fff', time: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-  { id: 3, name: 'Maria Garcia', username: 'mariag', mutualFriends: 11, avatar: 'https://ui-avatars.com/api/?name=Maria+Garcia&background=F59E0B&color=fff', time: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-];
-
-const mockSuggestions = [
-  { id: 1, name: 'David Kim', username: 'davidk', mutualFriends: 9, avatar: 'https://ui-avatars.com/api/?name=David+Kim&background=3B82F6&color=fff' },
-  { id: 2, name: 'Sophie Turner', username: 'sophiet', mutualFriends: 6, avatar: 'https://ui-avatars.com/api/?name=Sophie+Turner&background=EC4899&color=fff' },
-  { id: 3, name: 'James Miller', username: 'jamesm', mutualFriends: 10, avatar: 'https://ui-avatars.com/api/?name=James+Miller&background=8B5CF6&color=fff' },
-  { id: 4, name: 'Olivia White', username: 'oliviaw', mutualFriends: 5, avatar: 'https://ui-avatars.com/api/?name=Olivia+White&background=06B6D4&color=fff' },
-];
+// TODO: Replace with Supabase queries
+const mockFriends = [];
+const mockRequests = [];
+const mockSuggestions = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Friends page loaded');
@@ -82,6 +54,22 @@ function loadFriends() {
     return;
   }
   
+  // Show empty state if no friends
+  if (mockFriends.length === 0) {
+    friendsList.innerHTML = `
+      <div class="col-12">
+        <div class="card text-center py-5">
+          <div class="card-body">
+            <i class="bi bi-people fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">No friends yet</h5>
+            <p class="text-gray-500 mb-3">Start connecting with people by sending friend requests!</p>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
   mockFriends.forEach(friend => {
     const friendCard = createFriendCard(friend, 'friend');
     friendsList.appendChild(friendCard);
@@ -96,6 +84,22 @@ function loadFriends() {
 function loadFriendRequests() {
   const requestsList = document.getElementById('requests-list');
   
+  // Show empty state if no requests
+  if (mockRequests.length === 0) {
+    requestsList.innerHTML = `
+      <div class="col-12">
+        <div class="card text-center py-5">
+          <div class="card-body">
+            <i class="bi bi-person-check fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">No friend requests</h5>
+            <p class="text-gray-500 mb-0">You're all caught up!</p>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
   mockRequests.forEach(request => {
     const requestCard = createFriendCard(request, 'request');
     requestsList.appendChild(requestCard);
@@ -107,6 +111,22 @@ function loadFriendRequests() {
  */
 function loadSuggestions() {
   const suggestionsList = document.getElementById('suggestions-list');
+  
+  // Show empty state if no suggestions
+  if (mockSuggestions.length === 0) {
+    suggestionsList.innerHTML = `
+      <div class="col-12">
+        <div class="card text-center py-5">
+          <div class="card-body">
+            <i class="bi bi-person-plus fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">No suggestions available</h5>
+            <p class="text-gray-500 mb-0">Check back later for new friend suggestions!</p>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
   
   mockSuggestions.forEach(suggestion => {
     const suggestionCard = createFriendCard(suggestion, 'suggestion');

@@ -174,126 +174,21 @@
           
           <!-- Posts Feed -->
           <div id="postsFeed">
-            <!-- Post 1 -->
-            <article class="post-card">
-              <div class="post-header">
-                <img src="https://ui-avatars.com/api/?name=Sarah+Wilson&background=06B6D4&color=fff" 
-                     alt="Sarah Wilson" class="post-avatar">
-                <div>
-                  <a href="profile.html" class="post-author text-decoration-none">Sarah Wilson</a>
-                  <p class="post-time mb-0">2 hours ago</p>
-                </div>
-                <div class="ms-auto">
-                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
-                  </ul>
-                </div>
+            <!-- Posts will be loaded dynamically -->
+            <div class="card text-center py-5">
+              <div class="card-body">
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <h5 class="text-muted">No posts yet</h5>
+                <p class="text-gray-500 mb-3">Start following people or create your first post!</p>
+                <a href="create-post.html" class="btn btn-primary-gradient">
+                  <i class="bi bi-plus-circle me-2"></i>Create Post
+                </a>
               </div>
-              <div class="post-content">
-                <p>Just finished working on an amazing new project! 🚀 So excited to share it with everyone soon. Sometimes the best things take time, and this one was definitely worth the wait!</p>
-              </div>
-              <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800" alt="Workspace" class="post-image">
-              <div class="post-actions">
-                <button class="post-action-btn" data-action="like">
-                  <i class="bi bi-heart"></i>
-                  <span>128</span>
-                </button>
-                <button class="post-action-btn" data-action="comment">
-                  <i class="bi bi-chat"></i>
-                  <span>24</span>
-                </button>
-                <button class="post-action-btn" data-action="share">
-                  <i class="bi bi-share"></i>
-                  <span>Share</span>
-                </button>
-              </div>
-            </article>
-            
-            <!-- Post 2 -->
-            <article class="post-card">
-              <div class="post-header">
-                <img src="https://ui-avatars.com/api/?name=Mike+Johnson&background=3B82F6&color=fff" 
-                     alt="Mike Johnson" class="post-avatar">
-                <div>
-                  <a href="profile.html" class="post-author text-decoration-none">Mike Johnson</a>
-                  <p class="post-time mb-0">5 hours ago</p>
-                </div>
-                <div class="ms-auto">
-                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="post-content">
-                <p>Coffee and coding - the perfect combination for a productive morning! ☕💻</p>
-                <p>What's your favorite programming fuel?</p>
-              </div>
-              <div class="post-actions">
-                <button class="post-action-btn" data-action="like">
-                  <i class="bi bi-heart"></i>
-                  <span>86</span>
-                </button>
-                <button class="post-action-btn" data-action="comment">
-                  <i class="bi bi-chat"></i>
-                  <span>42</span>
-                </button>
-                <button class="post-action-btn" data-action="share">
-                  <i class="bi bi-share"></i>
-                  <span>Share</span>
-                </button>
-              </div>
-            </article>
-            
-            <!-- Post 3 -->
-            <article class="post-card">
-              <div class="post-header">
-                <img src="https://ui-avatars.com/api/?name=Emily+Chen&background=10B981&color=fff" 
-                     alt="Emily Chen" class="post-avatar">
-                <div>
-                  <a href="profile.html" class="post-author text-decoration-none">Emily Chen</a>
-                  <p class="post-time mb-0">Yesterday</p>
-                </div>
-                <div class="ms-auto">
-                  <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-three-dots"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="post-content">
-                <p>Beautiful sunset at the beach today! 🌅 Nature always finds a way to remind us to slow down and appreciate the little things.</p>
-              </div>
-              <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800" alt="Beach sunset" class="post-image">
-              <div class="post-actions">
-                <button class="post-action-btn liked" data-action="like">
-                  <i class="bi bi-heart-fill"></i>
-                  <span>256</span>
-                </button>
-                <button class="post-action-btn" data-action="comment">
-                  <i class="bi bi-chat"></i>
-                  <span>67</span>
-                </button>
-                <button class="post-action-btn" data-action="share">
-                  <i class="bi bi-share"></i>
-                  <span>Share</span>
-                </button>
-              </div>
-            </article>
+            </div>
           </div>
           
-          <!-- Load More -->
-          <div class="text-center py-4">
+          <!-- Load More (hidden by default) -->
+          <div class="text-center py-4 d-none" id="loadMoreContainer">
             <button class="btn btn-outline-primary" id="loadMoreBtn">
               <i class="bi bi-arrow-down-circle me-2"></i>Load More Posts
             </button>
