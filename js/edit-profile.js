@@ -40,13 +40,65 @@ async function loadProfileData() {
     document.getElementById('lastName').value = lastName;
     document.getElementById('username').value = profile?.username || '';
     document.getElementById('bio').value = profile?.bio || '';
+    
+    // Contact & Location
     document.getElementById('location').value = profile?.location || '';
     document.getElementById('website').value = profile?.website || '';
+    if (document.getElementById('phone')) {
+      document.getElementById('phone').value = profile?.phone || '';
+    }
+    
+    // Birthday
+    if (document.getElementById('birthday') && profile?.birthday) {
+      document.getElementById('birthday').value = profile.birthday;
+    }
+    
+    // Gender
+    if (profile?.gender) {
+      const genderRadio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
+      if (genderRadio) genderRadio.checked = true;
+    }
+    
+    // Work & Education
+    if (document.getElementById('work')) {
+      document.getElementById('work').value = profile?.work || '';
+    }
+    if (document.getElementById('education')) {
+      document.getElementById('education').value = profile?.education || '';
+    }
+    
+    // Relationship
+    if (document.getElementById('relationship') && profile?.relationship) {
+      document.getElementById('relationship').value = profile.relationship;
+    }
+    
+    // Social Links
+    if (document.getElementById('facebook')) {
+      document.getElementById('facebook').value = profile?.social_links?.facebook || '';
+    }
+    if (document.getElementById('twitter')) {
+      document.getElementById('twitter').value = profile?.social_links?.twitter || '';
+    }
+    if (document.getElementById('instagram')) {
+      document.getElementById('instagram').value = profile?.social_links?.instagram || '';
+    }
+    if (document.getElementById('linkedin')) {
+      document.getElementById('linkedin').value = profile?.social_links?.linkedin || '';
+    }
+    if (document.getElementById('github')) {
+      document.getElementById('github').value = profile?.social_links?.github || '';
+    }
     
     // Update avatar preview
     const avatarPreview = document.getElementById('profilePicturePreview');
     if (avatarPreview && profile?.avatar_url) {
       avatarPreview.src = profile.avatar_url;
+    }
+    
+    // Update cover photo preview
+    const coverPreview = document.getElementById('coverPhotoPreview');
+    if (coverPreview && profile?.cover_photo_url) {
+      coverPreview.style.background = `url(${profile.cover_photo_url}) center/cover no-repeat`;
     }
     
     // Update character count
@@ -165,6 +217,22 @@ function initFormSubmit() {
       const bio = document.getElementById('bio')?.value || '';
       const location = document.getElementById('location')?.value || '';
       const website = document.getElementById('website')?.value || '';
+      const phone = document.getElementById('phone')?.value || '';
+      const birthday = document.getElementById('birthday')?.value || null;
+      const work = document.getElementById('work')?.value || '';
+      const education = document.getElementById('education')?.value || '';
+      const relationship = document.getElementById('relationship')?.value || '';
+      
+      // Get gender
+      const genderRadio = document.querySelector('input[name="gender"]:checked');
+      const gender = genderRadio?.value || null;
+      
+      // Get social links
+      const facebook = document.getElementById('facebook')?.value || '';
+      const twitter = document.getElementById('twitter')?.value || '';
+      const instagram = document.getElementById('instagram')?.value || '';
+      const linkedin = document.getElementById('linkedin')?.value || '';
+      const github = document.getElementById('github')?.value || '';
       
       // Validation
       if (!firstName.trim() || !lastName.trim()) {
@@ -214,6 +282,19 @@ function initFormSubmit() {
           bio: bio || null,
           location: location || null,
           website: website || null,
+          phone: phone || null,
+          birthday: birthday || null,
+          gender: gender || null,
+          work: work || null,
+          education: education || null,
+          relationship: relationship || null,
+          social_links: {
+            facebook: facebook || null,
+            twitter: twitter || null,
+            instagram: instagram || null,
+            linkedin: linkedin || null,
+            github: github || null,
+          }
         };
         
         // Add image URLs if uploaded

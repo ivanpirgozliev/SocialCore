@@ -67,31 +67,22 @@
           <div class="dropdown">
             <button class="btn btn-link text-muted position-relative p-2" type="button" data-bs-toggle="dropdown">
               <i class="bi bi-chat-dots fs-5"></i>
-              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">3</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
               <li class="dropdown-header">Messages</li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person-circle me-2"></i>Sarah sent you a message</a></li>
-              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person-circle me-2"></i>Mike: Hey, how are you?</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-center text-primary" href="#">See all messages</a></li>
+              <li><a class="dropdown-item py-2 text-center text-muted">No new messages</a></li>
             </ul>
           </div>
           <!-- Notifications -->
           <div class="dropdown">
             <button class="btn btn-link text-muted position-relative p-2" type="button" data-bs-toggle="dropdown">
               <i class="bi bi-bell fs-5"></i>
-              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">5</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end" style="width: 320px;">
               <li class="dropdown-header">Notifications</li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-heart-fill text-danger me-2"></i>Sarah liked your post</a></li>
-              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-chat-fill text-primary me-2"></i>Mike commented on your photo</a></li>
-              <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person-plus-fill text-success me-2"></i>Emily sent you a friend request</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-center text-primary" href="#">See all notifications</a></li>
+              <li><a class="dropdown-item py-2 text-center text-muted">No new notifications</a></li>
             </ul>
           </div>
         </div>
@@ -148,7 +139,6 @@
                     <input type="file" class="d-none" id="profilePictureInput" accept="image/*">
                   </label>
                 </div>
-                <p class="text-muted small mb-3">JPG, PNG or GIF. Max size 2MB.</p>
                 <div class="d-flex flex-column gap-2">
                   <button type="button" class="btn btn-primary-gradient" onclick="document.getElementById('profilePictureInput').click()">
                     <i class="bi bi-cloud-arrow-up me-2"></i>Upload New Photo
@@ -192,11 +182,11 @@
                 <div class="row mb-3">
                   <div class="col-md-6">
                     <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="firstName" name="firstName" value="John" required>
+                    <input type="text" class="form-control" id="firstName" name="firstName" required>
                   </div>
                   <div class="col-md-6">
                     <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="lastName" name="lastName" value="Doe" required>
+                    <input type="text" class="form-control" id="lastName" name="lastName" required>
                   </div>
                 </div>
                 
@@ -205,7 +195,7 @@
                   <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
                   <div class="input-group">
                     <span class="input-group-text">@</span>
-                    <input type="text" class="form-control" id="username" name="username" value="johndoe" required>
+                    <input type="text" class="form-control" id="username" name="username" required>
                   </div>
                   <div class="form-text">Only letters, numbers, and underscores. 3-30 characters.</div>
                 </div>
@@ -214,7 +204,7 @@
                 <div class="mb-3">
                   <label for="bio" class="form-label">Bio</label>
                   <textarea class="form-control" id="bio" name="bio" rows="3" maxlength="160" 
-                            placeholder="Tell us about yourself...">Full-stack developer passionate about building great user experiences. Coffee enthusiast ☕ | Tech lover 💻 | Always learning 📚</textarea>
+                            placeholder="Tell us about yourself..."></textarea>
                   <div class="d-flex justify-content-between">
                     <div class="form-text">Write a short bio to introduce yourself.</div>
                     <small class="text-muted"><span id="bioCharCount">0</span>/160</small>
@@ -260,7 +250,7 @@
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
                     <input type="text" class="form-control" id="location" name="location" 
-                           placeholder="City, Country" value="Sofia, Bulgaria">
+                           placeholder="City, Country">
                   </div>
                 </div>
                 
@@ -270,7 +260,7 @@
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-globe"></i></span>
                     <input type="url" class="form-control" id="website" name="website" 
-                           placeholder="https://yourwebsite.com" value="https://johndoe.dev">
+                           placeholder="https://yourwebsite.com">
                   </div>
                 </div>
                 
@@ -299,7 +289,7 @@
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
                     <input type="text" class="form-control" id="work" name="work" 
-                           placeholder="Job Title at Company" value="Software Developer at TechCorp">
+                           placeholder="Job Title at Company">
                   </div>
                 </div>
                 
@@ -309,7 +299,7 @@
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-mortarboard"></i></span>
                     <input type="text" class="form-control" id="education" name="education" 
-                           placeholder="School or University" value="Sofia University">
+                           placeholder="School or University">
                   </div>
                 </div>
               </div>
