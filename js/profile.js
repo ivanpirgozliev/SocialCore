@@ -4,7 +4,7 @@
  */
 
 import { showToast } from './main.js';
-import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing } from './database.js';
+import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Load user profile data
@@ -278,6 +278,27 @@ function initProfileActions() {
   if (shareProfileBtn && shareProfileBtn.textContent.includes('Share Profile')) {
     shareProfileBtn.addEventListener('click', () => {
       shareProfile();
+    });
+  }
+  
+  // Edit cover photo button
+  const editCoverBtn = document.querySelector('.profile-cover .btn');
+  if (editCoverBtn) {
+    editCoverBtn.addEventListener('click', () => {
+      uploadCoverPhoto();
+    });
+  }
+  
+  // Avatar click to upload
+  const avatarImg = document.querySelector('.profile-avatar-large');
+  if (avatarImg) {
+    avatarImg.style.cursor = 'pointer';
+    avatarImg.title = 'Click to change profile picture';
+    avatarImg.addEventListener('click', () => {
+      uploadAvatarPhoto();
+    });
+  }
+}
     });
   }
 
@@ -562,3 +583,81 @@ function initTabNavigation() {
     });
   });
 }
+
+/**
+ * Upload avatar photo
+ */
+async function uploadAvatarPhoto() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      showToast('Uploading profile picture...', 'info');
+      
+      const imageUrl = await uploadProfileImage(file, 'avatar');
+      
+      const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+      await updateProfile(userData.id, { avatar_url: imageUrl });
+      
+      // Update UI
+      document.querySelectorAll('img[alt*="' + userData.name + '"], .profile-avatar-large').forEach(img => {
+        img.src = imageUrl;
+      });
+      
+      // Update local storage
+      userData.avatar = imageUrl;
+      localStorage.setItem('socialcore_user', JSON.stringify(userData));
+      
+      showToast('Profile picture updated!', 'success');
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      showToast(error.message || 'Failed to upload image', 'error');
+    }
+  };
+  
+  input.click();
+}
+
+/**
+ * Upload cover photo
+ */
+async function uploadCoverPhoto() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      showToast('Uploading cover photo...', 'info');
+      
+      const imageUrl = await uploadProfileImage(file, 'cover');
+      
+      const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+      await updateProfile(userData.id, { cover_photo_url: imageUrl });
+      
+      // Update UI
+      const coverElement = document.querySelector('.profile-cover');
+      if (coverElement) {
+        coverElement.style.backgroundImage = `url(${imageUrl})`;
+        coverElement.style.backgroundSize = 'cover';
+        coverElement.style.backgroundPosition = 'center';
+      }
+      
+      showToast('Cover photo updated!', 'success');
+    } catch (error) {
+      console.error('Cover upload error:', error);
+      showToast(error.message || 'Failed to upload image', 'error');
+    }
+  };
+  
+  input.click();
+}
+

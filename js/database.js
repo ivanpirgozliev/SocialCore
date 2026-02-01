@@ -399,3 +399,93 @@ export async function searchUsers(query, limit = 20) {
   if (error) throw error;
   return data || [];
 }
+
+// ============================================
+// FILE UPLOADS
+// ============================================
+
+/**
+ * Upload profile image (avatar or cover)
+ * @param {File} file - Image file
+ * @param {string} type - 'avatar' or 'cover'
+ * @returns {Promise<string>} Public URL of uploaded image
+ */
+export async function uploadProfileImage(file, type = 'avatar') {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Validate file
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (file.size > maxSize) {
+    throw new Error('Image size must be less than 5MB');
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Only JPG, PNG and WebP images are allowed');
+  }
+
+  // Create unique filename
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${user.id}/${type}-${Date.now()}.${fileExt}`;
+
+  // Upload to Supabase Storage
+  const { data, error } = await supabase.storage
+    .from('profile-images')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+  if (error) throw error;
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('profile-images')
+    .getPublicUrl(fileName);
+
+  return publicUrl;
+}
+
+/**
+ * Upload post image
+ * @param {File} file - Image file
+ * @returns {Promise<string>} Public URL of uploaded image
+ */
+export async function uploadPostImage(file) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Validate file
+  const maxSize = 10 * 1024 * 1024; // 10MB for posts
+  if (file.size > maxSize) {
+    throw new Error('Image size must be less than 10MB');
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Only JPG, PNG, WebP and GIF images are allowed');
+  }
+
+  // Create unique filename
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${user.id}/post-${Date.now()}.${fileExt}`;
+
+  // Upload to Supabase Storage
+  const { data, error } = await supabase.storage
+    .from('post-images')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) throw error;
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('post-images')
+    .getPublicUrl(fileName);
+
+  return publicUrl;
+}
+

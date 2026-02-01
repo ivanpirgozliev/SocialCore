@@ -4,7 +4,7 @@
  */
 
 import { showToast } from './main.js';
-import { createPost } from './database.js';
+import { createPost, uploadPostImage } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize create post form
@@ -28,11 +28,11 @@ function initCreatePostForm() {
     e.preventDefault();
 
     const content = document.getElementById('postContent').value.trim();
-    const imagePreview = document.getElementById('imagePreview');
-    const hasImage = imagePreview && imagePreview.src && !imagePreview.closest('.d-none');
+    const imageUpload = document.getElementById('imageUpload');
+    const imageFile = imageUpload?.files[0];
 
     // Validate content
-    if (!content && !hasImage) {
+    if (!content && !imageFile) {
       showToast('Please write something or add an image to your post.', 'warning');
       return;
     }
@@ -44,10 +44,18 @@ function initCreatePostForm() {
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Posting...';
 
     try {
+      let imageUrl = null;
+      
+      // Upload image if selected
+      if (imageFile) {
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading image...';
+        imageUrl = await uploadPostImage(imageFile);
+      }
+
       // Create post data
       const postData = {
         content: content,
-        image_url: hasImage ? imagePreview.src : null,
+        image_url: imageUrl,
       };
 
       // Send to Supabase
@@ -58,6 +66,7 @@ function initCreatePostForm() {
       // Redirect to feed after short delay
       setTimeout(() => {
         window.location.href = 'feed.html';
+      }, 1500);
       }, 1500);
     } catch (error) {
       showToast(error.message || 'Failed to create post. Please try again.', 'error');
