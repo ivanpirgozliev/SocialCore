@@ -54,7 +54,8 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Trigger to update updated_at on profile changes
 CREATE TRIGGER set_updated_at
@@ -80,7 +81,8 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = '';
 
 -- Trigger to create profile when user signs up
 CREATE TRIGGER on_auth_user_created

@@ -60,7 +60,8 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Function to decrement likes_count on posts
 CREATE OR REPLACE FUNCTION public.decrement_post_likes_count()
@@ -73,7 +74,8 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Function to increment likes_count on comments
 CREATE OR REPLACE FUNCTION public.increment_comment_likes_count()
@@ -86,7 +88,8 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Function to decrement likes_count on comments
 CREATE OR REPLACE FUNCTION public.decrement_comment_likes_count()
@@ -99,7 +102,8 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Triggers to update likes_count
 CREATE TRIGGER increment_post_likes

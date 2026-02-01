@@ -4,6 +4,7 @@
  */
 
 import { showToast } from './main.js';
+import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize profile actions
@@ -153,19 +154,31 @@ function openEditProfileModal() {
 /**
  * Save profile changes
  */
-function saveProfile() {
-  // TODO: Implement Supabase profile update
+async function saveProfile() {
+  const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+  
   const profileData = {
-    firstName: document.getElementById('editFirstName')?.value,
-    lastName: document.getElementById('editLastName')?.value,
+    full_name: `${document.getElementById('editFirstName')?.value || ''} ${document.getElementById('editLastName')?.value || ''}`.trim(),
     username: document.getElementById('editUsername')?.value,
     bio: document.getElementById('editBio')?.value,
-    location: document.getElementById('editLocation')?.value,
-    website: document.getElementById('editWebsite')?.value,
   };
 
-  console.log('Saving profile:', profileData);
-  showToast('Profile updated successfully!', 'success');
+  try {
+    await updateProfile(userData.id, profileData);
+    
+    // Update local storage
+    userData.name = profileData.full_name;
+    userData.username = profileData.username;
+    localStorage.setItem('socialcore_user', JSON.stringify(userData));
+    
+    showToast('Profile updated successfully!', 'success');
+    
+    // Reload page to show updates
+    setTimeout(() => location.reload(), 1500);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    showToast('Failed to update profile. Please try again.', 'error');
+  }
 }
 
 /**

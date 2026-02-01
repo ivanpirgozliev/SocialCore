@@ -4,6 +4,7 @@
  */
 
 import { showToast, formatRelativeTime } from './main.js';
+import { getFeedPosts, likePost, unlikePost, isPostLiked, createComment, getPostComments } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize post actions (like, comment, share)
@@ -80,8 +81,29 @@ function handleLike(button, postId) {
 
   countSpan.textContent = count;
 
-  // TODO: Send like/unlike to Supabase
-  console.log(`Post ${postId} ${button.classList.contains('liked') ? 'liked' : 'unliked'}`);
+  // Send like/unlike to Supabase
+  try {
+    if (button.classList.contains('liked')) {
+      await likePost(postId);
+    } else {
+      await unlikePost(postId);
+    }
+  } catch (error) {
+    console.error('Error updating like:', error);
+    // Revert UI changes on error
+    if (button.classList.contains('liked')) {
+      button.classList.remove('liked');
+      icon.classList.remove('bi-heart-fill');
+      icon.classList.add('bi-heart');
+      count--;
+    } else {
+      button.classList.add('liked');
+      icon.classList.remove('bi-heart');
+      icon.classList.add('bi-heart-fill');
+      count++;
+    }
+    countSpan.textContent = count;
+  }
 }
 
 /**
@@ -154,35 +176,46 @@ function handleComment(button, postId) {
  * @param {string} postId - Post ID
  * @param {HTMLElement} commentSection - Comment section element
  */
-function submitComment(input, postId, commentSection) {
+async function submitComment(input, postId, commentSection) {
   const commentText = input.value.trim();
   if (!commentText) return;
 
-  // Create new comment element
-  const commentsList = commentSection.querySelector('.comments-list');
-  const newComment = document.createElement('div');
-  newComment.className = 'd-flex gap-2 mb-2';
-  newComment.innerHTML = `
-    <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
-         alt="John Doe" class="rounded-circle" width="30" height="30">
-    <div class="bg-light rounded p-2 flex-grow-1">
-      <strong class="d-block small">John Doe</strong>
-      <span class="small">${escapeHtml(commentText)}</span>
-    </div>
-  `;
+  // Disable input while submitting
+  input.disabled = true;
 
-  commentsList.appendChild(newComment);
-  input.value = '';
+  try {
+    // Send comment to Supabase
+    const comment = await createComment(postId, commentText);
 
-  // Update comment count
-  const postCard = commentSection.closest('.post-card');
-  const commentBtn = postCard.querySelector('[data-action="comment"] span');
-  if (commentBtn) {
-    commentBtn.textContent = parseInt(commentBtn.textContent) + 1;
+    // Create new comment element
+    const commentsList = commentSection.querySelector('.comments-list');
+    const newComment = document.createElement('div');
+    newComment.className = 'd-flex gap-2 mb-2';
+    newComment.innerHTML = `
+      <img src="${comment.profiles.avatar_url}" 
+           alt="${comment.profiles.full_name}" class="rounded-circle" width="30" height="30">
+      <div class="bg-light rounded p-2 flex-grow-1">
+        <strong class="d-block small">${escapeHtml(comment.profiles.full_name)}</strong>
+        <span class="small">${escapeHtml(commentText)}</span>
+      </div>
+    `;
+
+    commentsList.appendChild(newComment);
+    input.value = '';
+
+    // Update comment count
+    const postCard = commentSection.closest('.post-card');
+    const commentBtn = postCard.querySelector('[data-action="comment"] span');
+    if (commentBtn) {
+      commentBtn.textContent = parseInt(commentBtn.textContent) + 1;
+    }
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    showToast('Failed to post comment. Please try again.', 'error');
+  } finally {
+    input.disabled = false;
+    input.focus();
   }
-
-  // TODO: Send comment to Supabase
-  console.log(`Comment on post ${postId}: ${commentText}`);
 }
 
 /**

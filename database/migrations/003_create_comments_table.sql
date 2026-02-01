@@ -69,7 +69,8 @@ BEGIN
   WHERE id = NEW.post_id;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Function to decrement comments_count on posts
 CREATE OR REPLACE FUNCTION public.decrement_post_comments_count()
@@ -80,7 +81,8 @@ BEGIN
   WHERE id = OLD.post_id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = '';
 
 -- Trigger to increment comments_count when comment is created
 CREATE TRIGGER increment_comments_count

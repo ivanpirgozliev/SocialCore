@@ -4,6 +4,7 @@
  */
 
 import { showToast } from './main.js';
+import { createPost } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize create post form
@@ -46,13 +47,11 @@ function initCreatePostForm() {
       // Create post data
       const postData = {
         content: content,
-        image: hasImage ? imagePreview.src : null,
-        privacy: getSelectedPrivacy(),
-        createdAt: new Date().toISOString(),
+        image_url: hasImage ? imagePreview.src : null,
       };
 
-      // TODO: Send to Supabase
-      await simulateCreatePost(postData);
+      // Send to Supabase
+      await createPost(postData);
 
       showToast('Post created successfully!', 'success');
 
@@ -186,25 +185,7 @@ function getSelectedPrivacy() {
   return 'public';
 }
 
-/**
- * Simulate creating a post (to be replaced with Supabase)
- * @param {Object} postData - Post data
- * @returns {Promise} Resolves on success
- */
-function simulateCreatePost(postData) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      console.log('Creating post:', postData);
-      
-      // Simulate successful post creation
-      if (postData.content || postData.image) {
-        resolve({ success: true, id: Date.now() });
-      } else {
-        reject(new Error('Post content is required'));
-      }
-    }, 1500);
-  });
-}
+
 
 /**
  * Handle feeling selection

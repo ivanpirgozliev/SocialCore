@@ -49,7 +49,8 @@ RETURNS INTEGER AS $$
   SELECT COUNT(*)::INTEGER
   FROM public.follows
   WHERE following_id = user_id;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = '';
 
 -- Function to get following count for a user
 CREATE OR REPLACE FUNCTION public.get_following_count(user_id UUID)
@@ -57,7 +58,8 @@ RETURNS INTEGER AS $$
   SELECT COUNT(*)::INTEGER
   FROM public.follows
   WHERE follower_id = user_id;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = '';
 
 -- Function to check if user A follows user B
 CREATE OR REPLACE FUNCTION public.is_following(follower UUID, following UUID)
@@ -67,7 +69,8 @@ RETURNS BOOLEAN AS $$
     FROM public.follows
     WHERE follower_id = follower AND following_id = following
   );
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = '';
 
 -- Comments
 COMMENT ON TABLE public.follows IS 'User follow relationships';

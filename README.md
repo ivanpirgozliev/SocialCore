@@ -24,11 +24,19 @@ SocialCore е уеб базирана социална платформа, ко�
 - **Vite** - Build tool и dev server
 
 ### Backend (планирано)
-- **Supabase** - Backend as a Service
+- **Supabase** - Backend as a Service ✅ **Configured**
   - PostgreSQL база данни
   - Автентикация
   - Real-time subscriptions
   - Storage за медия файлове
+  - Row Level Security (RLS)
+
+### Database Schema
+- ✅ **profiles** - User profiles
+- ✅ **posts** - User posts
+- ✅ **comments** - Post comments
+- ✅ **likes** - Likes on posts and comments
+- ✅ **follows** - User follow relationships
 
 ## 📦 Инсталация
 
@@ -50,12 +58,19 @@ SocialCore е уеб базирана социална платформа, ко�
    npm install
    ```
 
-3. **Стартиране на dev сървър**
+3. **Настройка на Supabase**
+   
+   Следвайте инструкциите в [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) за:
+   - Създаване на Supabase проект
+   - Конфигуриране на .env файл
+   - Изпълнение на database миграции
+
+4. **Стартиране на dev сървър**
    ```bash
    npm run dev
    ```
 
-4. **Отворете браузъра на**
+5. **Отворете браузъра на**
    ```
    http://localhost:3000
    ```
@@ -75,9 +90,20 @@ SocialCore/
 │   └── images/           # Изображения и лого
 ├── css/                  # Стилове
 │   └── styles.css        # Основен CSS файл
+├── database/             # Database миграции
+│   ├── migrations/       # SQL миграционни файлове
+│   │   ├── 001_create_profiles_table.sql
+│   │   ├── 002_create_posts_table.sql
+│   │   ├── 003_create_comments_table.sql
+│   │   ├── 004_create_follows_table.sql
+│   │   └── 005_create_likes_table.sql
+│   ├── schema-diagram.md # Диаграма на базата данни
+│   └── README.md         # Database документация
 ├── js/                   # JavaScript модули
 │   ├── main.js           # Основен JS файл
 │   ├── auth.js           # Автентикация
+│   ├── supabase.js       # Supabase конфигурация
+│   ├── database.js       # Database helper функции
 │   ├── feed.js           # Feed функционалност
 │   ├── profile.js        # Профил функционалност
 │   └── create-post.js    # Създаване на постове
