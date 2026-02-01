@@ -8,7 +8,10 @@ ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS location TEXT,
 ADD COLUMN IF NOT EXISTS website TEXT;
 
--- Add constraint for website URL format (optional)
+-- Drop existing constraint if exists, then add new one
+ALTER TABLE public.profiles
+DROP CONSTRAINT IF EXISTS website_format;
+
 ALTER TABLE public.profiles
 ADD CONSTRAINT website_format CHECK (
   website IS NULL OR 
