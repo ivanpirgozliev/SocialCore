@@ -37,7 +37,16 @@ function initLoginForm(form) {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      // For development - ignore email confirmation errors
+      if (error && error.message !== 'Email not confirmed') {
+        throw error;
+      }
+
+      // Check if we have a user (even if email not confirmed)
+      if (!data.user) {
+        throw new Error('Login failed. Please check your credentials.');
+      }
 
       if (rememberMe) {
         localStorage.setItem('socialcore_remember', email);
