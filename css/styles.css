@@ -955,6 +955,16 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+/* Style hero image with glassmorphism on video background */
+.homepage-with-video .hero-image {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
 /* Improve text contrast on video */
 .homepage-with-video .hero-title {
   color: #ffffff;
