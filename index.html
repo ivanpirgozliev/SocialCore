@@ -33,55 +33,7 @@
     <div class="video-background__overlay"></div>
   </div>
 
-  <!-- ============================================
-       Navigation Bar
-       ============================================ -->
-  <nav class="navbar navbar-expand-lg sticky-top">
-    <div class="container">
-      <!-- Brand Logo -->
-      <a class="navbar-brand" href="index.html">
-        <img src="./assets/images/logo.svg" alt="SocialCore Logo" height="40">
-        SocialCore
-      </a>
-      
-      <!-- Mobile Toggle Button -->
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      
-      <!-- Navigation Links -->
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="index.html">
-              <i class="bi bi-house-door me-1"></i>Home
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="./pages/feed.html">
-              <i class="bi bi-newspaper me-1"></i>Feed
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="./pages/profile.html">
-              <i class="bi bi-person me-1"></i>Profile
-            </a>
-          </li>
-        </ul>
-        
-        <!-- Auth Buttons -->
-        <div class="d-flex gap-2">
-          <a href="./pages/login.html" class="btn btn-outline-primary">
-            <i class="bi bi-box-arrow-in-right me-1"></i>Login
-          </a>
-          <a href="./pages/register.html" class="btn btn-primary-gradient">
-            <i class="bi bi-person-plus me-1"></i>Sign Up
-          </a>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <!-- Navigation Bar removed from homepage - user is not logged in yet -->
 
   <!-- ============================================
        Hero Section
@@ -125,9 +77,20 @@
           </div>
         </div>
         
-        <!-- Hero Image -->
+        <!-- Hero Image with Auth Buttons -->
         <div class="col-lg-6 d-none d-lg-block text-center">
-          <img src="./assets/images/logo.svg" alt="Social Network Illustration" class="hero-image animate-pulse" style="max-width: 400px;">
+          <div class="hero-image-card">
+            <img src="./assets/images/logo.svg" alt="SocialCore Logo" class="hero-image animate-pulse" style="max-width: 320px;">
+            <!-- Auth Buttons -->
+            <div class="d-flex gap-3 justify-content-center mt-4">
+              <a href="./pages/login.html" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+              </a>
+              <a href="./pages/register.html" class="btn btn-primary-gradient btn-lg">
+                <i class="bi bi-person-plus me-2"></i>Sign Up
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
