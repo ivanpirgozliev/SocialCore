@@ -7,6 +7,9 @@ import { showToast } from './main.js';
 import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Load user profile data
+  loadUserProfile();
+
   // Initialize profile actions
   initProfileActions();
 
@@ -16,6 +19,179 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize tab navigation
   initTabNavigation();
 });
+
+/**
+ * Load user profile from Supabase
+ */
+async function loadUserProfile() {
+  try {
+    const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+    
+    if (!userData.id) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Get profile from Supabase
+    const profile = await getProfile(userData.id);
+    
+    // Update UI with real data
+    updateProfileUI(profile);
+    
+    // Load user posts
+    const posts = await getUserPosts(userData.id);
+    updatePostsUI(posts);
+    
+  } catch (error) {
+    console.error('Error loading profile:', error);
+    // If error, use local storage data as fallback
+    const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
+    updateProfileUIFromLocalStorage(userData);
+  }
+}
+
+/**
+ * Update profile UI with Supabase data
+ */
+function updateProfileUI(profile) {
+  // Update name
+  const nameElement = document.querySelector('.profile-info h2');
+  if (nameElement) nameElement.textContent = profile.full_name;
+  
+  // Update username
+  const usernameElement = document.querySelector('.profile-info p.text-muted');
+  if (usernameElement) usernameElement.textContent = `@${profile.username}`;
+  
+  // Update bio
+  const bioElement = document.querySelector('.profile-info p:not(.text-muted)');
+  if (bioElement && profile.bio) {
+    bioElement.textContent = profile.bio;
+  }
+  
+  // Update avatar
+  const avatarElements = document.querySelectorAll('img[alt*="John"], img[alt*="User"]');
+  avatarElements.forEach(img => {
+    img.src = profile.avatar_url;
+    img.alt = profile.full_name;
+  });
+  
+  // Update cover photo if exists
+  if (profile.cover_photo_url) {
+    const coverElement = document.querySelector('.profile-cover');
+    if (coverElement) {
+      coverElement.style.backgroundImage = `url(${profile.cover_photo_url})`;
+      coverElement.style.backgroundSize = 'cover';
+      coverElement.style.backgroundPosition = 'center';
+    }
+  }
+}
+
+/**
+ * Update profile UI from local storage (fallback)
+ */
+function updateProfileUIFromLocalStorage(userData) {
+  const nameElement = document.querySelector('.profile-info h2');
+  if (nameElement) nameElement.textContent = userData.name || 'User';
+  
+  const usernameElement = document.querySelector('.profile-info p.text-muted');
+  if (usernameElement) usernameElement.textContent = `@${userData.username || 'user'}`;
+  
+  const avatarElements = document.querySelectorAll('img[alt*="John"], img[alt*="User"]');
+  avatarElements.forEach(img => {
+    img.src = userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+    img.alt = userData.name || 'User';
+  });
+}
+
+/**
+ * Update posts UI
+ */
+function updatePostsUI(posts) {
+  const postsContainer = document.getElementById('postsContent');
+  if (!postsContainer) return;
+  
+  if (!posts || posts.length === 0) {
+    postsContainer.innerHTML = `
+      <div class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="text-muted mt-3">No posts yet. Start sharing your thoughts!</p>
+        <a href="create-post.html" class="btn btn-primary-gradient mt-3">
+          <i class="bi bi-plus-circle me-2"></i>Create Post
+        </a>
+      </div>
+    `;
+    return;
+  }
+  
+  // Clear existing content
+  postsContainer.innerHTML = '';
+  
+  // Render posts
+  posts.forEach(post => {
+    const postCard = createPostCard(post);
+    postsContainer.insertAdjacentHTML('beforeend', postCard);
+  });
+}
+
+/**
+ * Create post card HTML
+ */
+function createPostCard(post) {
+  const relativeTime = formatRelativeTime(new Date(post.created_at));
+  
+  return `
+    <div class="post-card" data-post-id="${post.id}">
+      <div class="post-header">
+        <img src="${post.profiles.avatar_url}" alt="${post.profiles.full_name}" class="post-avatar">
+        <div>
+          <div class="post-author">${post.profiles.full_name}</div>
+          <div class="post-time">${relativeTime}</div>
+        </div>
+      </div>
+      <div class="post-content">
+        <p>${escapeHtml(post.content)}</p>
+        ${post.image_url ? `<img src="${post.image_url}" alt="Post image" class="post-image">` : ''}
+      </div>
+      <div class="post-actions">
+        <button class="post-action-btn" data-action="like">
+          <i class="bi bi-heart"></i>
+          <span>${post.likes_count || 0}</span>
+        </button>
+        <button class="post-action-btn" data-action="comment">
+          <i class="bi bi-chat"></i>
+          <span>${post.comments_count || 0}</span>
+        </button>
+        <button class="post-action-btn" data-action="share">
+          <i class="bi bi-share"></i>
+          <span>${post.shares_count || 0}</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Format relative time
+ */
+function formatRelativeTime(date) {
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
+  
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return date.toLocaleDateString();
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 /**
  * Initialize profile action buttons
