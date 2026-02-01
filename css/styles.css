@@ -625,6 +625,16 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-xl);
 }
 
+/* Tab Content (Friends page) */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
 /* ============================================
    Responsive Adjustments
    ============================================ */
