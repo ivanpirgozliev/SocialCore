@@ -53,7 +53,7 @@ function initPostActions() {
  * @param {HTMLElement} button - Like button element
  * @param {string} postId - Post ID
  */
-function handleLike(button, postId) {
+async function handleLike(button, postId) {
   const icon = button.querySelector('i');
   const countSpan = button.querySelector('span');
   let count = parseInt(countSpan.textContent) || 0;
