@@ -88,7 +88,7 @@ function updateProfileUI(profile) {
   }
   
   // Update About section in sidebar
-  const aboutList = document.querySelector('.card-body ul.list-unstyled');
+  const aboutList = document.getElementById('aboutList');
   if (aboutList) {
     // Clear existing content
     aboutList.innerHTML = '';
@@ -115,6 +115,60 @@ function updateProfileUI(profile) {
         <a href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener">${escapeHtml(displayText)}</a>
       `;
       aboutList.appendChild(websiteLi);
+    }
+
+    // Add birthday if exists
+    if (profile.birthday) {
+      const birthdayLi = document.createElement('li');
+      birthdayLi.className = 'mb-2 d-flex align-items-center';
+      const birthdayDate = new Date(profile.birthday);
+      const formattedBirthday = Number.isNaN(birthdayDate.getTime())
+        ? String(profile.birthday)
+        : birthdayDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      birthdayLi.innerHTML = `
+        <i class="bi bi-cake2 me-3 text-muted"></i>
+        <span>Birthday <strong>${escapeHtml(formattedBirthday)}</strong></span>
+      `;
+      aboutList.appendChild(birthdayLi);
+    }
+
+    // Add work if exists
+    if (profile.work) {
+      const workLi = document.createElement('li');
+      workLi.className = 'mb-2 d-flex align-items-center';
+      workLi.innerHTML = `
+        <i class="bi bi-briefcase me-3 text-muted"></i>
+        <span>Work <strong>${escapeHtml(profile.work)}</strong></span>
+      `;
+      aboutList.appendChild(workLi);
+    }
+
+    // Add education if exists
+    if (profile.education) {
+      const educationLi = document.createElement('li');
+      educationLi.className = 'mb-2 d-flex align-items-center';
+      educationLi.innerHTML = `
+        <i class="bi bi-mortarboard me-3 text-muted"></i>
+        <span>Education <strong>${escapeHtml(profile.education)}</strong></span>
+      `;
+      aboutList.appendChild(educationLi);
+    }
+
+    // Add social links if exists
+    const socialLinks = normalizeSocialLinks(profile.social_links);
+    const socialEntries = Object.entries(socialLinks).filter(([, url]) => typeof url === 'string' && url.trim());
+    if (socialEntries.length > 0) {
+      socialEntries.forEach(([platform, url]) => {
+        const socialLi = document.createElement('li');
+        socialLi.className = 'mb-2 d-flex align-items-center';
+        const safeUrl = url.trim();
+        const displayText = getDisplayUrlText(safeUrl);
+        socialLi.innerHTML = `
+          <i class="${getSocialIconClass(platform)} me-3 text-muted"></i>
+          <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener">${escapeHtml(displayText)}</a>
+        `;
+        aboutList.appendChild(socialLi);
+      });
     }
     
     // Add joined date
@@ -151,6 +205,46 @@ function updateProfileUI(profile) {
       coverElement.style.backgroundSize = 'cover';
       coverElement.style.backgroundPosition = 'center';
     }
+  }
+}
+
+function normalizeSocialLinks(socialLinks) {
+  if (!socialLinks) return {};
+  if (typeof socialLinks === 'object') return socialLinks;
+  if (typeof socialLinks !== 'string') return {};
+  try {
+    const parsed = JSON.parse(socialLinks);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getSocialIconClass(platform) {
+  const normalized = String(platform || '').toLowerCase();
+  switch (normalized) {
+    case 'facebook':
+      return 'bi bi-facebook';
+    case 'twitter':
+    case 'x':
+      return 'bi bi-twitter-x';
+    case 'instagram':
+      return 'bi bi-instagram';
+    case 'linkedin':
+      return 'bi bi-linkedin';
+    case 'github':
+      return 'bi bi-github';
+    default:
+      return 'bi bi-globe';
+  }
+}
+
+function getDisplayUrlText(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, '');
+  } catch {
+    return String(url).replace(/^https?:\/\//, '').replace(/^www\./, '');
   }
 }
 
