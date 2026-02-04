@@ -18,7 +18,8 @@ export default defineConfig({
         friends: resolve(__dirname, 'pages/friends.html'),
         createPost: resolve(__dirname, 'pages/create-post.html'),
         editProfile: resolve(__dirname, 'pages/edit-profile.html'),
-        settings: resolve(__dirname, 'pages/settings.html')
+        settings: resolve(__dirname, 'pages/settings.html'),
+        admin: resolve(__dirname, 'pages/admin.html')
       }
     }
   },

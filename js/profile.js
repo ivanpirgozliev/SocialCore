@@ -3,7 +3,7 @@
  * Handles user profile functionality
  */
 
-import { showToast } from './main.js';
+import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,6 +32,9 @@ async function loadUserProfile() {
       return;
     }
 
+    // Best-effort refresh of stored user (keeps avatar in sync)
+    await refreshStoredUserFromProfile();
+
     // Get profile from Supabase
     const profile = await getProfile(userData.id);
     
@@ -54,6 +57,8 @@ async function loadUserProfile() {
  * Update profile UI with Supabase data
  */
 function updateProfileUI(profile) {
+  const storedUser = getStoredUser();
+
   // Update name
   const nameElement = document.querySelector('.profile-info h2');
   if (nameElement) nameElement.textContent = profile.full_name;
@@ -190,12 +195,13 @@ function updateProfileUI(profile) {
     }
   }
   
-  // Update avatar
-  const avatarElements = document.querySelectorAll('img[alt*="John"], img[alt*="User"]');
-  avatarElements.forEach(img => {
-    img.src = profile.avatar_url;
-    img.alt = profile.full_name;
-  });
+  // Update profile header avatar (avoid brittle alt-based selectors)
+  const avatarUrl = profile?.avatar_url || storedUser?.avatar;
+  const avatarImg = document.querySelector('.profile-avatar-large');
+  if (avatarImg && avatarUrl) {
+    avatarImg.src = avatarUrl;
+    avatarImg.alt = profile?.full_name ? `${profile.full_name} profile photo` : 'Profile photo';
+  }
   
   // Update cover photo if exists
   if (profile.cover_photo_url) {
@@ -205,6 +211,15 @@ function updateProfileUI(profile) {
       coverElement.style.backgroundSize = 'cover';
       coverElement.style.backgroundPosition = 'center';
     }
+  }
+
+  // Update Profile page "Create Post" card
+  const createPostAvatar = document.getElementById('profileCreatePostAvatar');
+  const createPostPrompt = document.getElementById('profileCreatePostPrompt');
+  if (createPostAvatar && avatarUrl) createPostAvatar.src = avatarUrl;
+  if (createPostPrompt) {
+    const firstName = String(profile.full_name || '').trim().split(' ')[0];
+    createPostPrompt.textContent = firstName ? `What's on your mind, ${firstName}?` : "What's on your mind?";
   }
 }
 
@@ -257,12 +272,16 @@ function updateProfileUIFromLocalStorage(userData) {
   
   const usernameElement = document.querySelector('.profile-info p.text-muted');
   if (usernameElement) usernameElement.textContent = `@${userData.username || 'user'}`;
-  
-  const avatarElements = document.querySelectorAll('img[alt*="John"], img[alt*="User"]');
-  avatarElements.forEach(img => {
-    img.src = userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
-    img.alt = userData.name || 'User';
-  });
+
+  const avatarUrl = userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const avatarImg = document.querySelector('.profile-avatar-large');
+  if (avatarImg) {
+    avatarImg.src = avatarUrl;
+    avatarImg.alt = userData.name ? `${userData.name} profile photo` : 'Profile photo';
+  }
+
+  const createPostAvatar = document.getElementById('profileCreatePostAvatar');
+  if (createPostAvatar) createPostAvatar.src = avatarUrl;
 }
 
 /**

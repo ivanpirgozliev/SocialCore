@@ -3,10 +3,13 @@
  * Handles post creation functionality
  */
 
-import { showToast } from './main.js';
+import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { createPost, uploadPostImage } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Hydrate current user UI (avatar/name/placeholder)
+  initCurrentUserCreatePostUI();
+
   // Initialize create post form
   initCreatePostForm();
 
@@ -16,6 +19,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize character counter
   initCharacterCounter();
 });
+
+async function initCurrentUserCreatePostUI() {
+  const user = (await refreshStoredUserFromProfile()) || getStoredUser();
+  if (!user) return;
+
+  const avatarEl = document.getElementById('createPostUserAvatar');
+  const nameEl = document.getElementById('createPostUserName');
+  const contentEl = document.getElementById('postContent');
+
+  if (avatarEl && user.avatar) avatarEl.src = user.avatar;
+  if (nameEl) nameEl.textContent = user.name || 'User';
+
+  if (contentEl) {
+    const firstName = (user.name || '').trim().split(' ')[0];
+    contentEl.placeholder = firstName ? `What's on your mind, ${firstName}?` : "What's on your mind?";
+  }
+}
 
 /**
  * Initialize create post form

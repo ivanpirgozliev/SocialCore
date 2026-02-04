@@ -3,10 +3,13 @@
  * Handles posts feed functionality
  */
 
-import { showToast, formatRelativeTime } from './main.js';
+import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { getFeedPosts, likePost, unlikePost, isPostLiked, createComment, getPostComments } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Hydrate current user (avatar/name/username) and update Feed UI
+  initCurrentUserFeedUI();
+
   // Initialize post actions (like, comment, share)
   initPostActions();
 
@@ -16,6 +19,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize search functionality
   initSearch();
 });
+
+async function initCurrentUserFeedUI() {
+  const user = (await refreshStoredUserFromProfile()) || getStoredUser();
+  if (!user) return;
+
+  // Sidebar user card
+  const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+  const sidebarName = document.getElementById('sidebarUserName');
+  const sidebarUsername = document.getElementById('sidebarUserUsername');
+
+  if (sidebarAvatar && user.avatar) sidebarAvatar.src = user.avatar;
+  if (sidebarName) sidebarName.textContent = user.name || 'User';
+  if (sidebarUsername) sidebarUsername.textContent = `@${user.username || 'user'}`;
+
+  // Create-post card
+  const createPostAvatar = document.getElementById('createPostAvatar');
+  const createPostPrompt = document.getElementById('createPostPrompt');
+
+  if (createPostAvatar && user.avatar) createPostAvatar.src = user.avatar;
+  if (createPostPrompt) {
+    const firstName = (user.name || '').trim().split(' ')[0];
+    createPostPrompt.textContent = firstName ? `What's on your mind, ${firstName}?` : "What's on your mind?";
+  }
+}
 
 /**
  * Initialize post action buttons (like, comment, share)
@@ -126,10 +153,14 @@ function handleComment(button, postId) {
   // Create comment section
   commentSection = document.createElement('div');
   commentSection.className = 'comment-section p-3 border-top';
+
+  const user = getStoredUser();
+  const currentUserAvatarUrl = user?.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+
   commentSection.innerHTML = `
     <div class="d-flex gap-2 mb-3">
-      <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
-           alt="Profile" class="rounded-circle" width="35" height="35">
+      <img src="${currentUserAvatarUrl}" 
+           alt="Profile" class="rounded-circle" width="35" height="35" loading="lazy">
       <div class="flex-grow-1">
         <div class="input-group">
           <input type="text" class="form-control" placeholder="Write a comment...">
@@ -140,14 +171,7 @@ function handleComment(button, postId) {
       </div>
     </div>
     <div class="comments-list">
-      <div class="d-flex gap-2 mb-2">
-        <img src="https://ui-avatars.com/api/?name=Sarah+Wilson&background=06B6D4&color=fff" 
-             alt="Sarah Wilson" class="rounded-circle" width="30" height="30">
-        <div class="bg-light rounded p-2 flex-grow-1">
-          <strong class="d-block small">Sarah Wilson</strong>
-          <span class="small">Great post! 🎉</span>
-        </div>
-      </div>
+      <div class="text-muted small">Loading comments...</div>
     </div>
   `;
 
@@ -157,6 +181,9 @@ function handleComment(button, postId) {
 
   // Focus on input
   commentSection.querySelector('input').focus();
+
+  // Load existing comments
+  loadComments(postId, commentSection);
 
   // Handle comment submission
   const submitBtn = commentSection.querySelector('button');
@@ -168,6 +195,36 @@ function handleComment(button, postId) {
       submitComment(input, postId, commentSection);
     }
   });
+}
+
+async function loadComments(postId, commentSection) {
+  const commentsList = commentSection.querySelector('.comments-list');
+  if (!commentsList) return;
+
+  try {
+    const comments = await getPostComments(postId);
+    if (!comments.length) {
+      commentsList.innerHTML = '<div class="text-muted small">No comments yet.</div>';
+      return;
+    }
+
+    commentsList.innerHTML = comments.map((comment) => {
+      const fullName = comment?.profiles?.full_name || 'User';
+      const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+      return `
+        <div class="d-flex gap-2 mb-2">
+          <img src="${avatarUrl}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
+          <div class="bg-light rounded p-2 flex-grow-1">
+            <strong class="d-block small">${escapeHtml(fullName)}</strong>
+            <span class="small">${escapeHtml(comment.content || '')}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading comments:', error);
+    commentsList.innerHTML = '<div class="text-muted small">Failed to load comments.</div>';
+  }
 }
 
 /**

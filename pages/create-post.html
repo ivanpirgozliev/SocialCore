@@ -85,12 +85,11 @@
         <div class="dropdown">
           <button class="btn btn-link text-decoration-none dropdown-toggle" type="button" 
                   id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
-                 alt="Profile" class="rounded-circle" width="35" height="35">
+              <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="navbar-avatar js-navbar-avatar" width="35" height="35" loading="lazy">
           </button>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
             <li><a class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
-            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><a class="dropdown-item" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
           </ul>
@@ -121,10 +120,10 @@
             <div class="card-body p-4">
               <!-- User Info -->
               <div class="d-flex align-items-center mb-4">
-                <img src="https://ui-avatars.com/api/?name=John+Doe&background=3B82F6&color=fff" 
-                     alt="Profile" class="rounded-circle me-3" width="50" height="50">
+                <img id="createPostUserAvatar" src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" 
+                     alt="Profile" class="rounded-circle me-3" width="50" height="50" loading="lazy">
                 <div>
-                  <h6 class="mb-0">John Doe</h6>
+                  <h6 class="mb-0" id="createPostUserName">User</h6>
                   <!-- Post Privacy Dropdown -->
                   <div class="dropdown">
                     <button class="btn btn-sm btn-light dropdown-toggle" type="button" 
@@ -145,7 +144,7 @@
                 <!-- Post Content -->
                 <div class="mb-4">
                   <textarea class="form-control border-0 fs-5" id="postContent" name="content" 
-                            rows="5" placeholder="What's on your mind, John?" 
+                            rows="5" placeholder="What's on your mind?" 
                             style="resize: none; background-color: transparent;"></textarea>
                 </div>
                 

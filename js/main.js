@@ -48,7 +48,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Active nav link based on current page
   setActiveNavLink();
+
+  // Navbar user avatar (from localStorage)
+  initNavbarUserAvatar();
+  refreshStoredUserFromProfile().then(() => {
+    initNavbarUserAvatar();
+  });
 });
+
+export function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('socialcore_user') || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function buildFallbackAvatarUrl(user) {
+  const name = user?.name || user?.username || user?.email || 'User';
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff`;
+}
+
+export async function refreshStoredUserFromProfile() {
+  const user = getStoredUser();
+  if (!user?.id) return user;
+
+  try {
+    const { getProfile } = await import('./database.js');
+    const profile = await getProfile(user.id);
+
+    if (!profile) return user;
+
+    const updatedUser = {
+      ...user,
+      name: profile.full_name || user.name,
+      username: profile.username || user.username,
+      avatar: profile.avatar_url || user.avatar,
+    };
+
+    localStorage.setItem('socialcore_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  } catch {
+    return user;
+  }
+}
+
+function initNavbarUserAvatar() {
+  const avatarEls = document.querySelectorAll('.js-navbar-avatar');
+  if (!avatarEls.length) return;
+
+  const user = getStoredUser();
+  const avatarUrl = user?.avatar || buildFallbackAvatarUrl(user);
+  const altText = user?.name ? `${user.name} profile photo` : 'Profile';
+
+  avatarEls.forEach((img) => {
+    img.src = avatarUrl;
+    img.alt = altText;
+  });
+}
 
 /**
  * Set active class on the current page's nav link

@@ -3,6 +3,8 @@
  * Handles settings functionality
  */
 
+import { showToast } from './main.js';
+
 // ============================================
 // Password Toggle Visibility
 // ============================================
@@ -122,50 +124,4 @@ forms.forEach(formId => {
   }
 });
 
-// ============================================
-// Toast Notification
-// ============================================
-function showToast(message, type = 'success') {
-  // Remove existing toasts
-  const existingToasts = document.querySelectorAll('.toast-notification');
-  existingToasts.forEach(toast => toast.remove());
-  
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `toast-notification alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
-  toast.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 300px; animation: slideIn 0.3s ease;';
-  toast.innerHTML = `
-    <div class="d-flex align-items-center">
-      <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-      <span>${message}</span>
-      <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
-    </div>
-  `;
-  
-  document.body.appendChild(toast);
-  
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    if (toast.parentElement) {
-      toast.remove();
-    }
-  }, 3000);
-}
-
-// ============================================
-// Add animation styles
-// ============================================
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-`;
-document.head.appendChild(style);
+// Uses shared `showToast()` from main.js
