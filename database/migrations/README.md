@@ -52,6 +52,9 @@ Run migrations in order:
 3. `003_create_comments_table.sql` - Creates comments table with counter triggers
 4. `004_create_follows_table.sql` - Creates follows table with helper functions
 5. `005_create_likes_table.sql` - Creates likes table with counter triggers
+6. `006_add_location_website_to_profiles.sql` - Adds location + website fields to profiles
+7. `007_add_extended_profile_fields.sql` - Adds extended profile fields (phone, birthday, etc.)
+8. `008_optimize_rls_policies_auth_calls.sql` - Optimizes RLS policies to avoid per-row auth.* evaluation
 
 ## How to Run Migrations
 

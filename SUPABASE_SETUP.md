@@ -37,6 +37,27 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 ## Стъпка 4: Изпълнете Database миграциите
 
+Имате 2 начина:
+
+### Вариант A (препоръчително): Supabase CLI миграции (ще ги виждате като миграции)
+
+Този вариант записва history за миграциите и е най-удобен за екипна работа.
+
+1. Уверете се, че имате `.env` с ключовете (Стъпка 3) – за приложението.
+2. В терминал, в root папката на проекта, изпълнете:
+
+```bash
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push
+```
+
+3. Миграциите са в `/supabase/migrations/` и ще се приложат по ред.
+
+Забележка: Ако пускате SQL ръчно през SQL Editor, Supabase няма да ги отчете като „миграции“.
+
+### Вариант B: Ръчно (SQL Editor)
+
 1. Отидете на вашия Supabase проект
 2. От лявото меню изберете **SQL Editor**
 3. Изпълнете всеки SQL файл от `/database/migrations/` по ред:
@@ -62,6 +83,13 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ### 4.5 Създайте likes таблица
 - Отворете `005_create_likes_table.sql`
 - Копирайте и изпълнете
+
+### 4.6 Добавете полета към profiles (по желание, ако ги ползвате)
+- `006_add_location_website_to_profiles.sql`
+- `007_add_extended_profile_fields.sql`
+
+### 4.7 Оптимизация на RLS (ако Supabase Advisor показва performance warning)
+- `008_optimize_rls_policies_auth_calls.sql`
 
 ## Стъпка 5: Проверете базата данни
 

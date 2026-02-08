@@ -1,6 +1,16 @@
 # 🚀 Quick Start - Database Setup
 
-## Вече изпълнихте SQL миграциите? Ето следващите стъпки:
+## Миграции (препоръчително през Supabase CLI)
+
+За да се виждат и проследяват миграциите (history), пуснете:
+
+```bash
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push
+```
+
+Миграциите са в `/supabase/migrations/`.
 
 ### 1. Създайте .env файл
 
@@ -24,7 +34,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
   - ✅ profiles
   - ✅ posts
   - ✅ comments
-  - - ✅ follows
+   - ✅ follows
   - ✅ likes
 
 ### 3. Стартирайте приложението

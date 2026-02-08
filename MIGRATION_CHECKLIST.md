@@ -2,6 +2,16 @@
 
 ## ⚠️ ВАЖНО: Трябва да изпълниш тази миграция в Supabase!
 
+Ако използваш Supabase CLI (папка `/supabase/migrations/`), просто пусни:
+
+```bash
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push
+```
+
+Иначе използвай ръчния вариант по-долу.
+
 ### Migration 006 - Add Location & Website
 
 **Файл:** `database/migrations/006_add_location_website_to_profiles.sql`
