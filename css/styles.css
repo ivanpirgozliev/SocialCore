@@ -166,6 +166,14 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: none;
 }
 
+/* Profile photos thumbnails */
+#profilePhotosGrid img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+}
+
 /* ============================================
    Button Styles
    ============================================ */

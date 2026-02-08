@@ -7,6 +7,9 @@ import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.j
 import { supabase } from './supabase.js';
 import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage } from './database.js';
 
+const PHOTOS_BUCKET_ID = 'post-images';
+const USER_PHOTOS_FOLDER = 'photos';
+
 document.addEventListener('DOMContentLoaded', () => {
   // Load user profile data
   loadUserProfile();
@@ -55,6 +58,9 @@ async function loadUserProfile() {
     // Load user posts
     const posts = await getUserPosts(effectiveUserId);
     updatePostsUI(posts);
+
+    // Load user photos (sidebar card)
+    await loadProfilePhotos(effectiveUserId);
     
   } catch (error) {
     console.error('Error loading profile:', error);
@@ -62,6 +68,59 @@ async function loadUserProfile() {
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
     updateProfileUIFromLocalStorage(userData);
   }
+}
+
+function buildUserPhotosPrefix(userId) {
+  return `${userId}/${USER_PHOTOS_FOLDER}`;
+}
+
+async function loadProfilePhotos(userId) {
+  const grid = document.getElementById('profilePhotosGrid');
+  const emptyState = document.getElementById('profilePhotosEmptyState');
+  if (!grid || !emptyState) return;
+
+  grid.innerHTML = '';
+  emptyState.classList.add('d-none');
+
+  const prefix = buildUserPhotosPrefix(userId);
+
+  const { data, error } = await supabase.storage
+    .from(PHOTOS_BUCKET_ID)
+    .list(prefix, {
+      limit: 4,
+      offset: 0,
+      sortBy: { column: 'name', order: 'desc' },
+    });
+
+  if (error) {
+    // Keep the profile usable even if Storage is not configured
+    emptyState.classList.remove('d-none');
+    return;
+  }
+
+  const items = (data || []).filter((item) => item?.name);
+  if (!items.length) {
+    emptyState.classList.remove('d-none');
+    return;
+  }
+
+  const html = items
+    .map((item) => {
+      const fullPath = `${prefix}/${item.name}`;
+      const { data: urlData } = supabase.storage.from(PHOTOS_BUCKET_ID).getPublicUrl(fullPath);
+      const publicUrl = urlData?.publicUrl || '';
+
+      return `
+        <div class="col-6">
+          <a href="${publicUrl}" target="_blank" rel="noreferrer" class="d-block">
+            <img src="${publicUrl}" alt="Photo" class="img-fluid rounded" loading="lazy">
+          </a>
+        </div>
+      `;
+    })
+    .join('');
+
+  grid.innerHTML = html;
 }
 
 /**
