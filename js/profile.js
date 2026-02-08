@@ -4,6 +4,7 @@
  */
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
+import { supabase } from './supabase.js';
 import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage } from './database.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,23 +27,33 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadUserProfile() {
   try {
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
-    
-    if (!userData.id) {
+
+    // Prefer the authenticated Supabase user id (source of truth)
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const effectiveUserId = authUser?.id || userData.id;
+
+    if (!effectiveUserId) {
       window.location.href = 'login.html';
       return;
+    }
+
+    // Keep localStorage in sync with the real auth user id
+    if (authUser?.id && userData?.id !== authUser.id) {
+      const updatedUserData = { ...userData, id: authUser.id, email: authUser.email || userData.email };
+      localStorage.setItem('socialcore_user', JSON.stringify(updatedUserData));
     }
 
     // Best-effort refresh of stored user (keeps avatar in sync)
     await refreshStoredUserFromProfile();
 
     // Get profile from Supabase
-    const profile = await getProfile(userData.id);
+    const profile = await getProfile(effectiveUserId);
     
     // Update UI with real data
     updateProfileUI(profile);
     
     // Load user posts
-    const posts = await getUserPosts(userData.id);
+    const posts = await getUserPosts(effectiveUserId);
     updatePostsUI(posts);
     
   } catch (error) {

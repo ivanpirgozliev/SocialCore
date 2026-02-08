@@ -333,6 +333,10 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
+.profile-cover-edit-btn {
+  opacity: 0.6;
+}
+
 .profile-avatar-large {
   width: 150px;
   height: 150px;

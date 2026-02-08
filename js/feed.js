@@ -6,9 +6,16 @@
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { getFeedPosts, likePost, unlikePost, isPostLiked, createComment, getPostComments } from './database.js';
 
+const FEED_PAGE_SIZE = 10;
+let feedOffset = 0;
+let isLoadingFeed = false;
+
 document.addEventListener('DOMContentLoaded', () => {
   // Hydrate current user (avatar/name/username) and update Feed UI
   initCurrentUserFeedUI();
+
+  // Load initial feed posts
+  loadInitialFeedPosts();
 
   // Initialize post actions (like, comment, share)
   initPostActions();
@@ -19,6 +26,142 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize search functionality
   initSearch();
 });
+
+async function loadInitialFeedPosts() {
+  const postsFeed = document.getElementById('postsFeed');
+  if (!postsFeed) return;
+
+  isLoadingFeed = true;
+  feedOffset = 0;
+
+  try {
+    const posts = await getFeedPosts(FEED_PAGE_SIZE, feedOffset);
+    postsFeed.innerHTML = '';
+
+    if (!posts.length) {
+      postsFeed.innerHTML = buildEmptyStateHtml();
+      toggleLoadMore(false);
+      return;
+    }
+
+    renderFeedPosts(posts, { append: false });
+    feedOffset += posts.length;
+
+    // If we got a full page, allow loading more.
+    toggleLoadMore(posts.length === FEED_PAGE_SIZE);
+  } catch (error) {
+    console.error('Error loading feed posts:', error);
+    postsFeed.innerHTML = buildEmptyStateHtml('Failed to load posts');
+    showToast('Failed to load posts. Please refresh.', 'error');
+    toggleLoadMore(false);
+  } finally {
+    isLoadingFeed = false;
+  }
+}
+
+async function loadMoreFeedPosts() {
+  if (isLoadingFeed) return;
+  isLoadingFeed = true;
+
+  try {
+    const posts = await getFeedPosts(FEED_PAGE_SIZE, feedOffset);
+    if (!posts.length) {
+      toggleLoadMore(false);
+      return;
+    }
+
+    renderFeedPosts(posts, { append: true });
+    feedOffset += posts.length;
+    toggleLoadMore(posts.length === FEED_PAGE_SIZE);
+  } catch (error) {
+    console.error('Error loading more posts:', error);
+    showToast('Failed to load more posts.', 'error');
+  } finally {
+    isLoadingFeed = false;
+  }
+}
+
+function renderFeedPosts(posts, { append }) {
+  const postsFeed = document.getElementById('postsFeed');
+  if (!postsFeed) return;
+
+  if (!append) postsFeed.innerHTML = '';
+
+  posts.forEach((post) => {
+    postsFeed.insertAdjacentHTML('beforeend', createFeedPostHtml(post));
+  });
+}
+
+function createFeedPostHtml(post) {
+  const fullName = post?.profiles?.full_name || 'User';
+  const username = post?.profiles?.username || 'user';
+  const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const contentHtml = escapeHtml(post?.content || '').replace(/\n/g, '<br>');
+  const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
+
+  const likesCount = Number.isFinite(post?.likes_count) ? post.likes_count : 0;
+  const commentsCount = Number.isFinite(post?.comments_count) ? post.comments_count : 0;
+
+  return `
+    <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}">
+      <div class="post-header">
+        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="post-avatar" loading="lazy">
+        <div>
+          <a href="profile.html" class="post-author text-decoration-none">${escapeHtml(fullName)}</a>
+          <p class="post-time mb-0">${escapeHtml(timeText)}</p>
+        </div>
+        <div class="ms-auto">
+          <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="post-content">
+        ${contentHtml ? `<p class="mb-0">${contentHtml}</p>` : ''}
+        ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy">` : ''}
+      </div>
+      <div class="post-actions">
+        <button class="post-action-btn" data-action="like" type="button" aria-label="Like">
+          <i class="bi bi-heart"></i>
+          <span>${likesCount}</span>
+        </button>
+        <button class="post-action-btn" data-action="comment" type="button" aria-label="Comment">
+          <i class="bi bi-chat"></i>
+          <span>${commentsCount}</span>
+        </button>
+        <button class="post-action-btn" data-action="share" type="button" aria-label="Share">
+          <i class="bi bi-share"></i>
+          <span>Share</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function buildEmptyStateHtml(title = 'No posts yet') {
+  return `
+    <div class="card text-center py-5">
+      <div class="card-body">
+        <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+        <h5 class="text-muted">${escapeHtml(title)}</h5>
+        <p class="text-gray-500 mb-3">Start following people or create your first post!</p>
+        <a href="create-post.html" class="btn btn-primary-gradient">
+          <i class="bi bi-plus-circle me-2"></i>Create Post
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+function toggleLoadMore(show) {
+  const container = document.getElementById('loadMoreContainer');
+  if (!container) return;
+  container.classList.toggle('d-none', !show);
+}
 
 async function initCurrentUserFeedUI() {
   const user = (await refreshStoredUserFromProfile()) || getStoredUser();
@@ -369,15 +512,7 @@ function initLoadMore() {
     loadMoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
 
     try {
-      // TODO: Fetch more posts from Supabase
-      await simulateLoadMore();
-
-      // Add mock posts
-      const postsFeed = document.getElementById('postsFeed');
-      const newPost = createMockPost();
-      postsFeed.appendChild(newPost);
-
-      showToast('Posts loaded!', 'success');
+      await loadMoreFeedPosts();
     } catch (error) {
       showToast('Failed to load posts', 'error');
     } finally {
@@ -385,60 +520,6 @@ function initLoadMore() {
       loadMoreBtn.innerHTML = '<i class="bi bi-arrow-down-circle me-2"></i>Load More Posts';
     }
   });
-}
-
-/**
- * Simulate loading more posts
- * @returns {Promise} Resolves after delay
- */
-function simulateLoadMore() {
-  return new Promise((resolve) => setTimeout(resolve, 1000));
-}
-
-/**
- * Create a mock post element
- * @returns {HTMLElement} Post element
- */
-function createMockPost() {
-  const post = document.createElement('article');
-  post.className = 'post-card';
-  post.innerHTML = `
-    <div class="post-header">
-      <img src="https://ui-avatars.com/api/?name=New+User&background=8B5CF6&color=fff" 
-           alt="New User" class="post-avatar">
-      <div>
-        <a href="profile.html" class="post-author text-decoration-none">New User</a>
-        <p class="post-time mb-0">Just now</p>
-      </div>
-      <div class="ms-auto">
-        <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-          <i class="bi bi-three-dots"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
-          <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="post-content">
-      <p>This is a newly loaded post! Thanks for scrolling down. 👋</p>
-    </div>
-    <div class="post-actions">
-      <button class="post-action-btn" data-action="like">
-        <i class="bi bi-heart"></i>
-        <span>0</span>
-      </button>
-      <button class="post-action-btn" data-action="comment">
-        <i class="bi bi-chat"></i>
-        <span>0</span>
-      </button>
-      <button class="post-action-btn" data-action="share">
-        <i class="bi bi-share"></i>
-        <span>Share</span>
-      </button>
-    </div>
-  `;
-  return post;
 }
 
 /**
