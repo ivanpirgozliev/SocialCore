@@ -5,14 +5,19 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Load user profile data
-  loadUserProfile();
+let profileView = {
+  authUserId: null,
+  profileUserId: null,
+  isOwnProfile: true,
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadUserProfile();
 
   // Initialize profile actions
   initProfileActions();
@@ -24,6 +29,58 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabNavigation();
 });
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+}
+
+async function resolveProfileUserId(authUserId) {
+  const params = new URLSearchParams(window.location.search);
+  const idParam = params.get('id');
+  if (idParam && isUuid(idParam)) return idParam;
+
+  const usernameParam = params.get('user') || params.get('username') || params.get('u');
+  if (usernameParam) {
+    const { id } = await getProfileIdByUsername(usernameParam);
+    return id;
+  }
+
+  return authUserId;
+}
+
+function applyProfileViewMode() {
+  const { isOwnProfile } = profileView;
+
+  const myProfileNavItem = document.getElementById('myProfileNavItem');
+  const myProfileNavLink = document.getElementById('myProfileNavLink');
+  if (myProfileNavItem) myProfileNavItem.classList.toggle('d-none', isOwnProfile);
+  if (myProfileNavLink && profileView.authUserId) {
+    myProfileNavLink.href = `profile.html?id=${encodeURIComponent(profileView.authUserId)}`;
+  }
+
+  const photosSeeAll = document.getElementById('profilePhotosSeeAllLink');
+  if (photosSeeAll && profileView.profileUserId) {
+    photosSeeAll.href = `photos.html?id=${encodeURIComponent(profileView.profileUserId)}`;
+  }
+
+  const editProfileBtn = document.querySelector('.btn-primary-gradient');
+  if (editProfileBtn && editProfileBtn.textContent.includes('Edit Profile')) {
+    editProfileBtn.classList.toggle('d-none', !isOwnProfile);
+  }
+
+  const editCoverBtn = document.querySelector('.profile-cover-edit-btn');
+  if (editCoverBtn) editCoverBtn.classList.toggle('d-none', !isOwnProfile);
+
+  const avatarImg = document.querySelector('.profile-avatar-large');
+  if (avatarImg && !isOwnProfile) {
+    avatarImg.style.cursor = 'default';
+    avatarImg.title = '';
+  }
+
+  const createPostAvatar = document.getElementById('profileCreatePostAvatar');
+  const createPostCard = createPostAvatar?.closest('.card');
+  if (createPostCard) createPostCard.classList.toggle('d-none', !isOwnProfile);
+}
+
 /**
  * Load user profile from Supabase
  */
@@ -33,38 +90,71 @@ async function loadUserProfile() {
 
     // Prefer the authenticated Supabase user id (source of truth)
     const { data: { user: authUser } } = await supabase.auth.getUser();
-    const effectiveUserId = authUser?.id || userData.id;
 
-    if (!effectiveUserId) {
+    if (!authUser?.id) {
       window.location.href = 'login.html';
       return;
     }
 
+    const authUserId = authUser.id;
+    const requestedProfileUserId = await resolveProfileUserId(authUserId);
+    const isOwnProfile = requestedProfileUserId === authUserId;
+
+    profileView = {
+      authUserId,
+      profileUserId: requestedProfileUserId,
+      isOwnProfile,
+    };
+
     // Keep localStorage in sync with the real auth user id
-    if (authUser?.id && userData?.id !== authUser.id) {
-      const updatedUserData = { ...userData, id: authUser.id, email: authUser.email || userData.email };
+    if (userData?.id !== authUserId) {
+      const updatedUserData = { ...userData, id: authUserId, email: authUser.email || userData.email };
       localStorage.setItem('socialcore_user', JSON.stringify(updatedUserData));
     }
 
     // Best-effort refresh of stored user (keeps avatar in sync)
     await refreshStoredUserFromProfile();
 
+    // Toggle UI for own vs other profile
+    applyProfileViewMode();
+
     // Get profile from Supabase
-    const profile = await getProfile(effectiveUserId);
+    const profile = await getProfile(requestedProfileUserId);
     
     // Update UI with real data
     updateProfileUI(profile);
     
     // Load user posts
-    const posts = await getUserPosts(effectiveUserId);
-    updatePostsUI(posts);
+    const posts = await getUserPosts(requestedProfileUserId);
+    updatePostsUI(posts, { isOwnProfile });
 
     // Load user photos (sidebar card)
-    await loadProfilePhotos(effectiveUserId);
+    await loadProfilePhotos(requestedProfileUserId);
+
+    // Show Admin Dashboard link if user is admin
+    try {
+      const isAdmin = await checkIsAdmin(authUserId);
+      if (isAdmin) {
+        const adminLink = document.getElementById('adminDashboardLink');
+        if (adminLink) adminLink.classList.remove('d-none');
+      }
+    } catch (e) {
+      // Silently ignore - non-admin users won't see the link
+    }
     
   } catch (error) {
     console.error('Error loading profile:', error);
-    // If error, use local storage data as fallback
+
+    // If user explicitly requested another profile and it failed, go back to feed.
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('id') || params.get('user') || params.get('username') || params.get('u');
+    if (requested) {
+      showToast('Failed to load that profile.', 'error');
+      window.location.href = 'feed.html';
+      return;
+    }
+
+    // Fallback: use local storage data
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
     updateProfileUIFromLocalStorage(userData);
   }
@@ -357,18 +447,21 @@ function updateProfileUIFromLocalStorage(userData) {
 /**
  * Update posts UI
  */
-function updatePostsUI(posts) {
+function updatePostsUI(posts, { isOwnProfile } = {}) {
   const postsContainer = document.getElementById('postsContent');
   if (!postsContainer) return;
   
   if (!posts || posts.length === 0) {
+    const own = isOwnProfile !== false;
     postsContainer.innerHTML = `
       <div class="text-center py-5">
         <i class="bi bi-inbox fs-1 text-muted"></i>
-        <p class="text-muted mt-3">No posts yet. Start sharing your thoughts!</p>
-        <a href="create-post.html" class="btn btn-primary-gradient mt-3">
-          <i class="bi bi-plus-circle me-2"></i>Create Post
-        </a>
+        <p class="text-muted mt-3">No posts yet.</p>
+        ${own ? `
+          <a href="create-post.html" class="btn btn-primary-gradient mt-3">
+            <i class="bi bi-plus-circle me-2"></i>Create Post
+          </a>
+        ` : ''}
       </div>
     `;
     return;

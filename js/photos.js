@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase.js';
 import { showToast } from './main.js';
+import { getProfileIdByUsername } from './database.js';
 
 const BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -13,18 +14,60 @@ document.addEventListener('DOMContentLoaded', () => {
   initPhotosPage();
 });
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+}
+
+async function resolveTargetUserId(authUserId) {
+  const params = new URLSearchParams(window.location.search);
+  const idParam = params.get('id');
+  if (idParam && isUuid(idParam)) return idParam;
+
+  const usernameParam = params.get('user') || params.get('username') || params.get('u');
+  if (usernameParam) {
+    const { id } = await getProfileIdByUsername(usernameParam);
+    return id;
+  }
+
+  return authUserId;
+}
+
 async function initPhotosPage() {
   const uploadForm = document.getElementById('uploadPhotosForm');
   const photosInput = document.getElementById('photosInput');
   const uploadBtn = document.getElementById('uploadPhotosBtn');
   const refreshBtn = document.getElementById('refreshPhotosBtn');
 
-  if (uploadForm && photosInput && uploadBtn) {
+  const backToProfileLink = document.getElementById('photosBackToProfileLink');
+  const uploadCard = document.getElementById('photosUploadCard');
+  const galleryTitle = document.getElementById('photosGalleryTitle');
+
+  const authUser = await requireUser();
+  if (!authUser) return;
+
+  let targetUserId = authUser.id;
+  try {
+    targetUserId = await resolveTargetUserId(authUser.id);
+  } catch (e) {
+    showToast('Could not find that user.', 'error');
+    window.location.href = 'feed.html';
+    return;
+  }
+
+  const isOwnPhotos = targetUserId === authUser.id;
+
+  if (backToProfileLink) {
+    backToProfileLink.href = `profile.html?id=${encodeURIComponent(targetUserId)}`;
+  }
+
+  if (uploadCard) uploadCard.classList.toggle('d-none', !isOwnPhotos);
+  if (galleryTitle && !isOwnPhotos) {
+    galleryTitle.innerHTML = '<i class="bi bi-images me-2 text-primary-blue"></i>Photos';
+  }
+
+  if (uploadForm && photosInput && uploadBtn && isOwnPhotos) {
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      const user = await requireUser();
-      if (!user) return;
 
       const files = Array.from(photosInput.files || []);
       if (!files.length) {
@@ -37,10 +80,10 @@ async function initPhotosPage() {
       uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
       try {
-        const uploadedCount = await uploadImages(user.id, files);
+        const uploadedCount = await uploadImages(authUser.id, files);
         showToast(`Uploaded ${uploadedCount} photo${uploadedCount === 1 ? '' : 's'}!`, 'success');
         photosInput.value = '';
-        await loadPhotos(user.id);
+        await loadPhotos(authUser.id);
       } catch (err) {
         showToast(err?.message || 'Upload failed. Please try again.', 'error');
       } finally {
@@ -52,15 +95,11 @@ async function initPhotosPage() {
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
-      const user = await requireUser();
-      if (!user) return;
-      await loadPhotos(user.id);
+      await loadPhotos(targetUserId);
     });
   }
 
-  const user = await requireUser();
-  if (!user) return;
-  await loadPhotos(user.id);
+  await loadPhotos(targetUserId);
 }
 
 async function requireUser() {

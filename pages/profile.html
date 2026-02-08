@@ -84,7 +84,9 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
             <li><a class="dropdown-item" href="feed.html"><i class="bi bi-newspaper me-2"></i>Feed</a></li>
+            <li id="myProfileNavItem" class="d-none"><a id="myProfileNavLink" class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
             <li><a class="dropdown-item" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li id="adminDashboardLink" class="d-none"><a class="dropdown-item" href="admin.html"><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
           </ul>
@@ -173,7 +175,7 @@
                 <h5 class="card-title mb-0">
                   <i class="bi bi-images me-2 text-primary-blue"></i>Photos
                 </h5>
-                <a href="photos.html" class="text-primary-blue text-decoration-none">See All</a>
+                <a id="profilePhotosSeeAllLink" href="photos.html" class="text-primary-blue text-decoration-none">See All</a>
               </div>
               <div id="profilePhotosEmptyState" class="text-center py-4 d-none">
                 <i class="bi bi-images fs-1 text-muted mb-3 d-block"></i>

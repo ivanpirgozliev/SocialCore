@@ -370,6 +370,25 @@ export async function getProfile(userId) {
 }
 
 /**
+ * Get user profile id by username
+ * @param {string} username - Username
+ * @returns {Promise<{ id: string }>} Profile id
+ */
+export async function getProfileIdByUsername(username) {
+  const normalized = String(username || '').trim();
+  if (!normalized) throw new Error('Missing username');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', normalized)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Update user profile
  * @param {string} userId - User ID
  * @param {Object} updates - Profile updates
@@ -489,3 +508,152 @@ export async function uploadPostImage(file) {
   return publicUrl;
 }
 
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+/**
+ * Check if a user has admin role
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>} True if admin
+ */
+export async function checkIsAdmin(userId) {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .single();
+
+  return !error && data?.role === 'admin';
+}
+
+/**
+ * Get current user's role
+ * @returns {Promise<string|null>} Role string or null
+ */
+export async function getCurrentUserRole() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error) return null;
+  return data?.role || null;
+}
+
+/**
+ * Get admin dashboard statistics
+ * @returns {Promise<Object>} Stats object with totalUsers, totalPosts, totalComments
+ */
+export async function getAdminStats() {
+  const [usersResult, postsResult, commentsResult] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('posts').select('id', { count: 'exact', head: true }),
+    supabase.from('comments').select('id', { count: 'exact', head: true }),
+  ]);
+
+  return {
+    totalUsers: usersResult.count || 0,
+    totalPosts: postsResult.count || 0,
+    totalComments: commentsResult.count || 0,
+  };
+}
+
+/**
+ * Get all users with their roles for admin panel
+ * @returns {Promise<Array>} Array of users with role info
+ */
+export async function getAdminUsers() {
+  // Get profiles with roles
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select(`
+      id,
+      username,
+      full_name,
+      avatar_url,
+      created_at
+    `)
+    .order('created_at', { ascending: false });
+
+  if (profilesError) throw profilesError;
+
+  // Get all user roles
+  const { data: roles, error: rolesError } = await supabase
+    .from('user_roles')
+    .select('user_id, role');
+
+  if (rolesError) throw rolesError;
+
+  // Build a role lookup map
+  const roleMap = {};
+  (roles || []).forEach(r => { roleMap[r.user_id] = r.role; });
+
+  // We need emails from auth - get them via a workaround
+  // Since we can't query auth.users directly from the client,
+  // we'll leave email blank and let the edge functions handle it
+  // Actually, we can store email in profiles or get it from the session
+  // For now, let's use the profiles data and enrich with role
+
+  return (profiles || []).map(p => ({
+    ...p,
+    role: roleMap[p.id] || 'user',
+    email: '', // Will be fetched separately if needed
+  }));
+}
+
+/**
+ * Get recent posts for admin panel
+ * @param {number} limit - Number of posts to fetch
+ * @returns {Promise<Array>} Array of posts with author info
+ */
+export async function getAdminPosts(limit = 20) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      *,
+      profiles:user_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Delete a post (admin action - bypasses normal ownership check)
+ * @param {string} postId - Post ID to delete
+ */
+export async function deletePostAdmin(postId) {
+  // First delete related comments and likes
+  const { error: likesError } = await supabase
+    .from('likes')
+    .delete()
+    .eq('post_id', postId);
+
+  if (likesError) console.warn('Error deleting post likes:', likesError);
+
+  const { error: commentsError } = await supabase
+    .from('comments')
+    .delete()
+    .eq('post_id', postId);
+
+  if (commentsError) console.warn('Error deleting post comments:', commentsError);
+
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) throw error;
+}

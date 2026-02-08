@@ -95,6 +95,8 @@ function renderFeedPosts(posts, { append }) {
 function createFeedPostHtml(post) {
   const fullName = post?.profiles?.full_name || 'User';
   const username = post?.profiles?.username || 'user';
+  const authorId = post?.profiles?.id;
+  const profileHref = authorId ? `profile.html?id=${encodeURIComponent(authorId)}` : 'profile.html';
   const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
   const contentHtml = escapeHtml(post?.content || '').replace(/\n/g, '<br>');
   const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
@@ -105,9 +107,11 @@ function createFeedPostHtml(post) {
   return `
     <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}">
       <div class="post-header">
-        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="post-avatar" loading="lazy">
+        <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
+          <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="post-avatar" loading="lazy">
+        </a>
         <div>
-          <a href="profile.html" class="post-author text-decoration-none">${escapeHtml(fullName)}</a>
+          <a href="${escapeHtml(profileHref)}" class="post-author text-decoration-none">${escapeHtml(fullName)}</a>
           <p class="post-time mb-0">${escapeHtml(timeText)}</p>
         </div>
         <div class="ms-auto">
