@@ -115,12 +115,27 @@
 
           <form id="uploadPhotosForm" class="row g-3" novalidate>
             <div class="col-12">
-              <input id="photosInput" class="form-control" type="file" accept="image/*" multiple required>
-              <div class="form-text text-muted">You can select multiple images.</div>
+              <input id="photosInput" class="d-none" type="file" accept="image/*" multiple required>
+              <label for="photosInput" class="upload-dropzone" role="button">
+                <div class="upload-dropzone-icon">
+                  <i class="bi bi-cloud-arrow-up"></i>
+                </div>
+                <div class="upload-dropzone-text">
+                  <strong>Drop photos here</strong>
+                  <span>or click to browse</span>
+                </div>
+                <div class="upload-dropzone-meta">PNG, JPG, GIF up to 10MB</div>
+              </label>
+              <div class="upload-files-summary" id="photosFilesSummary">No files selected</div>
+              <div class="upload-files-list" id="photosFilesList"></div>
+              <div class="upload-preview-grid" id="photosPreviewGrid"></div>
             </div>
-            <div class="col-12">
+            <div class="col-12 d-flex flex-wrap gap-2">
               <button id="uploadPhotosBtn" type="submit" class="btn btn-primary-gradient">
                 <i class="bi bi-upload me-1"></i>Upload
+              </button>
+              <button id="clearPhotosBtn" type="button" class="btn btn-outline-primary">
+                <i class="bi bi-x-circle me-1"></i>Clear selection
               </button>
             </div>
           </form>

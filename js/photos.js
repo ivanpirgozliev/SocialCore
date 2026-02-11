@@ -36,6 +36,11 @@ async function initPhotosPage() {
   const uploadForm = document.getElementById('uploadPhotosForm');
   const photosInput = document.getElementById('photosInput');
   const uploadBtn = document.getElementById('uploadPhotosBtn');
+  const clearBtn = document.getElementById('clearPhotosBtn');
+  const filesSummary = document.getElementById('photosFilesSummary');
+  const filesList = document.getElementById('photosFilesList');
+  const previewGrid = document.getElementById('photosPreviewGrid');
+  const dropzone = document.querySelector('.upload-dropzone');
   const refreshBtn = document.getElementById('refreshPhotosBtn');
 
   const backToProfileLink = document.getElementById('photosBackToProfileLink');
@@ -65,6 +70,47 @@ async function initPhotosPage() {
     galleryTitle.innerHTML = '<i class="bi bi-images me-2 text-primary-blue"></i>Photos';
   }
 
+  if (photosInput && isOwnPhotos) {
+    photosInput.addEventListener('change', () => {
+      renderSelectedFiles(photosInput.files, filesSummary, filesList, previewGrid);
+    });
+  }
+
+  if (dropzone && photosInput && isOwnPhotos) {
+    ;['dragenter', 'dragover'].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dropzone.classList.add('is-dragover');
+      });
+    });
+
+    ;['dragleave', 'drop'].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dropzone.classList.remove('is-dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (event) => {
+      const droppedFiles = Array.from(event.dataTransfer?.files || []);
+      if (!droppedFiles.length) return;
+
+      const dataTransfer = new DataTransfer();
+      droppedFiles.forEach((file) => dataTransfer.items.add(file));
+      photosInput.files = dataTransfer.files;
+      renderSelectedFiles(photosInput.files, filesSummary, filesList, previewGrid);
+    });
+  }
+
+  if (clearBtn && photosInput) {
+    clearBtn.addEventListener('click', () => {
+      photosInput.value = '';
+      renderSelectedFiles([], filesSummary, filesList, previewGrid);
+    });
+  }
+
   if (uploadForm && photosInput && uploadBtn && isOwnPhotos) {
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -83,6 +129,7 @@ async function initPhotosPage() {
         const uploadedCount = await uploadImages(authUser.id, files);
         showToast(`Uploaded ${uploadedCount} photo${uploadedCount === 1 ? '' : 's'}!`, 'success');
         photosInput.value = '';
+        renderSelectedFiles([], filesSummary, filesList, previewGrid);
         await loadPhotos(authUser.id);
       } catch (err) {
         showToast(err?.message || 'Upload failed. Please try again.', 'error');
@@ -100,6 +147,77 @@ async function initPhotosPage() {
   }
 
   await loadPhotos(targetUserId);
+}
+
+function renderSelectedFiles(fileList, summaryEl, listEl, previewEl) {
+  if (!summaryEl || !listEl || !previewEl) return;
+
+  const files = Array.from(fileList || []);
+  if (!files.length) {
+    summaryEl.textContent = 'No files selected';
+    listEl.innerHTML = '';
+    previewEl.innerHTML = '';
+    return;
+  }
+
+  const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+  summaryEl.textContent = `${files.length} file${files.length === 1 ? '' : 's'} selected · ${formatFileSize(totalSize)}`;
+
+  listEl.innerHTML = files
+    .slice(0, 6)
+    .map((file) => {
+      return `
+        <div class="upload-file-chip" title="${file.name}">
+          <i class="bi bi-image"></i>
+          <span>${file.name}</span>
+        </div>
+      `;
+    })
+    .join('');
+
+  if (files.length > 6) {
+    listEl.insertAdjacentHTML('beforeend', `
+      <div class="upload-file-chip upload-file-more">+${files.length - 6} more</div>
+    `);
+  }
+
+  const previewItems = files.slice(0, 8).map((file) => {
+    const objectUrl = URL.createObjectURL(file);
+    return `
+      <div class="upload-preview-item">
+        <img src="${objectUrl}" alt="${file.name}" data-object-url="${objectUrl}" loading="lazy">
+      </div>
+    `;
+  });
+
+  previewEl.innerHTML = previewItems.join('');
+
+  if (files.length > 8) {
+    previewEl.insertAdjacentHTML('beforeend', `
+      <div class="upload-preview-more">+${files.length - 8} more</div>
+    `);
+  }
+
+  previewEl.querySelectorAll('img[data-object-url]').forEach((img) => {
+    img.addEventListener('load', () => {
+      const url = img.getAttribute('data-object-url');
+      if (url) URL.revokeObjectURL(url);
+    }, { once: true });
+  });
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 async function requireUser() {
