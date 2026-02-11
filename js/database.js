@@ -58,13 +58,15 @@ export async function getFeedPosts(limit = 10, offset = 0) {
         username,
         full_name,
         avatar_url
-      )
+      ),
+      comments:comments(count),
+      likes:likes(count)
     `)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw error;
-  return data || [];
+  return hydratePostLikeState(data || []);
 }
 
 /**
@@ -83,14 +85,16 @@ export async function getUserPosts(userId, limit = 20) {
         username,
         full_name,
         avatar_url
-      )
+      ),
+      comments:comments(count),
+      likes:likes(count)
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return hydratePostLikeState(data || []);
 }
 
 /**
@@ -176,7 +180,7 @@ export async function isPostLiked(postId) {
  * @param {string} content - Comment content
  * @returns {Promise<Object>} Created comment
  */
-export async function createComment(postId, content) {
+export async function createComment(postId, content, parentCommentId = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
@@ -187,6 +191,7 @@ export async function createComment(postId, content) {
         post_id: postId,
         user_id: user.id,
         content: content,
+        parent_comment_id: parentCommentId,
       }
     ])
     .select(`
@@ -220,14 +225,146 @@ export async function getPostComments(postId, limit = 50) {
         username,
         full_name,
         avatar_url
-      )
+      ),
+      likes:likes(count)
     `)
     .eq('post_id', postId)
     .order('created_at', { ascending: true })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return hydrateCommentLikeState(data || []);
+}
+
+/**
+ * Like a comment
+ * @param {string} commentId - Comment ID
+ */
+export async function likeComment(commentId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('likes')
+    .insert([
+      {
+        user_id: user.id,
+        comment_id: commentId,
+      }
+    ]);
+
+  if (error) throw error;
+}
+
+/**
+ * Unlike a comment
+ * @param {string} commentId - Comment ID
+ */
+export async function unlikeComment(commentId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('comment_id', commentId);
+
+  if (error) throw error;
+}
+
+/**
+ * Check if user liked a comment
+ * @param {string} commentId - Comment ID
+ * @returns {Promise<boolean>} True if liked
+ */
+export async function isCommentLiked(commentId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('likes')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('comment_id', commentId)
+    .single();
+
+  return !error && !!data;
+}
+
+function resolveRelationCount(row, relationName, fallbackField) {
+  const relation = row?.[relationName];
+  if (Array.isArray(relation) && relation.length && relation[0]?.count != null) {
+    const countValue = Number(relation[0].count);
+    return Number.isFinite(countValue) ? countValue : 0;
+  }
+  if (Number.isFinite(row?.[fallbackField])) {
+    return row[fallbackField];
+  }
+  return 0;
+}
+
+async function hydratePostLikeState(posts) {
+  if (!posts.length) return [];
+
+  const normalized = posts.map((post) => ({
+    ...post,
+    likes_count: resolveRelationCount(post, 'likes', 'likes_count'),
+    comments_count: resolveRelationCount(post, 'comments', 'comments_count'),
+  }));
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return normalized.map((post) => ({ ...post, liked_by_user: false }));
+
+  const postIds = normalized.map((post) => post.id).filter(Boolean);
+  if (!postIds.length) return normalized.map((post) => ({ ...post, liked_by_user: false }));
+
+  const { data: likesData, error } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('user_id', user.id)
+    .in('post_id', postIds);
+
+  if (error) {
+    return normalized.map((post) => ({ ...post, liked_by_user: false }));
+  }
+
+  const likedSet = new Set((likesData || []).map((like) => like.post_id));
+  return normalized.map((post) => ({
+    ...post,
+    liked_by_user: likedSet.has(post.id),
+  }));
+}
+
+async function hydrateCommentLikeState(comments) {
+  if (!comments.length) return [];
+
+  const normalized = comments.map((comment) => ({
+    ...comment,
+    likes_count: resolveRelationCount(comment, 'likes', 'likes_count'),
+  }));
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+
+  const commentIds = normalized.map((comment) => comment.id).filter(Boolean);
+  if (!commentIds.length) return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+
+  const { data: likesData, error } = await supabase
+    .from('likes')
+    .select('comment_id')
+    .eq('user_id', user.id)
+    .in('comment_id', commentIds);
+
+  if (error) {
+    return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+  }
+
+  const likedSet = new Set((likesData || []).map((like) => like.comment_id));
+  return normalized.map((comment) => ({
+    ...comment,
+    liked_by_user: likedSet.has(comment.id),
+  }));
 }
 
 /**
@@ -621,13 +758,19 @@ export async function getAdminPosts(limit = 20) {
         username,
         full_name,
         avatar_url
-      )
+      ),
+      comments:comments(count),
+      likes:likes(count)
     `)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map((post) => ({
+    ...post,
+    likes_count: resolveRelationCount(post, 'likes', 'likes_count'),
+    comments_count: resolveRelationCount(post, 'comments', 'comments_count'),
+  }));
 }
 
 /**

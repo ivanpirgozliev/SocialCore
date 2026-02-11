@@ -4,7 +4,7 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
-import { getFeedPosts, likePost, unlikePost, isPostLiked, createComment, getPostComments } from './database.js';
+import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 let feedOffset = 0;
@@ -103,6 +103,9 @@ function createFeedPostHtml(post) {
 
   const likesCount = Number.isFinite(post?.likes_count) ? post.likes_count : 0;
   const commentsCount = Number.isFinite(post?.comments_count) ? post.comments_count : 0;
+  const isLiked = !!post?.liked_by_user;
+  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
+  const likeClass = isLiked ? 'liked' : '';
 
   return `
     <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}">
@@ -129,8 +132,8 @@ function createFeedPostHtml(post) {
         ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy">` : ''}
       </div>
       <div class="post-actions">
-        <button class="post-action-btn" data-action="like" type="button" aria-label="Like">
-          <i class="bi bi-heart"></i>
+        <button class="post-action-btn ${likeClass}" data-action="like" type="button" aria-label="Like">
+          <i class="bi ${likeIcon}"></i>
           <span>${likesCount}</span>
         </button>
         <button class="post-action-btn" data-action="comment" type="button" aria-label="Comment">
@@ -300,6 +303,7 @@ function handleComment(button, postId) {
   // Create comment section
   commentSection = document.createElement('div');
   commentSection.className = 'comment-section p-3 border-top';
+  commentSection.dataset.postId = postId;
 
   const user = getStoredUser();
   const currentUserAvatarUrl = user?.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
@@ -342,6 +346,39 @@ function handleComment(button, postId) {
       submitComment(input, postId, commentSection);
     }
   });
+
+  commentSection.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('.comment-action-btn');
+    const toggleBtn = e.target.closest('.comment-toggle-replies');
+
+    if (toggleBtn) {
+      const commentId = toggleBtn.dataset.commentId;
+      const commentItem = commentSection.querySelector(`.comment-item[data-comment-id="${CSS.escape(commentId)}"]`);
+      toggleReplies(commentItem);
+      return;
+    }
+
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.action;
+    const commentId = actionBtn.dataset.commentId;
+
+    if (action === 'like-comment' && commentId) {
+      handleCommentLike(actionBtn, commentId);
+    }
+
+    if (action === 'reply-comment' && commentId) {
+      const commentItem = actionBtn.closest('.comment-item');
+      toggleReplyForm(commentItem, postId, commentId);
+    }
+
+    if (action === 'submit-reply' && commentId) {
+      const replyInput = actionBtn.closest('.comment-reply-form')?.querySelector('input');
+      if (replyInput) {
+        submitReply(replyInput, postId, commentId, commentSection);
+      }
+    }
+  });
 }
 
 async function loadComments(postId, commentSection) {
@@ -355,19 +392,7 @@ async function loadComments(postId, commentSection) {
       return;
     }
 
-    commentsList.innerHTML = comments.map((comment) => {
-      const fullName = comment?.profiles?.full_name || 'User';
-      const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
-      return `
-        <div class="d-flex gap-2 mb-2">
-          <img src="${avatarUrl}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
-          <div class="bg-light rounded p-2 flex-grow-1">
-            <strong class="d-block small">${escapeHtml(fullName)}</strong>
-            <span class="small">${escapeHtml(comment.content || '')}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
+    renderCommentsList(comments, commentsList, postId);
   } catch (error) {
     console.error('Error loading comments:', error);
     commentsList.innerHTML = '<div class="text-muted small">Failed to load comments.</div>';
@@ -389,36 +414,198 @@ async function submitComment(input, postId, commentSection) {
 
   try {
     // Send comment to Supabase
-    const comment = await createComment(postId, commentText);
+    await createComment(postId, commentText, null);
 
-    // Create new comment element
-    const commentsList = commentSection.querySelector('.comments-list');
-    const newComment = document.createElement('div');
-    newComment.className = 'd-flex gap-2 mb-2';
-    newComment.innerHTML = `
-      <img src="${comment.profiles.avatar_url}" 
-           alt="${comment.profiles.full_name}" class="rounded-circle" width="30" height="30">
-      <div class="bg-light rounded p-2 flex-grow-1">
-        <strong class="d-block small">${escapeHtml(comment.profiles.full_name)}</strong>
-        <span class="small">${escapeHtml(commentText)}</span>
-      </div>
-    `;
-
-    commentsList.appendChild(newComment);
     input.value = '';
 
     // Update comment count
     const postCard = commentSection.closest('.post-card');
     const commentBtn = postCard.querySelector('[data-action="comment"] span');
     if (commentBtn) {
-      commentBtn.textContent = parseInt(commentBtn.textContent) + 1;
+      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
     }
+
+    await loadComments(postId, commentSection);
   } catch (error) {
     console.error('Error creating comment:', error);
     showToast('Failed to post comment. Please try again.', 'error');
   } finally {
     input.disabled = false;
     input.focus();
+  }
+}
+
+function renderCommentsList(comments, commentsList, postId) {
+  const tree = buildCommentTree(comments);
+  commentsList.innerHTML = tree.map((comment) => renderCommentItem(comment, 0, postId)).join('');
+}
+
+function buildCommentTree(comments) {
+  const map = new Map();
+  const roots = [];
+
+  comments.forEach((comment) => {
+    map.set(comment.id, { ...comment, replies: [] });
+  });
+
+  comments.forEach((comment) => {
+    const node = map.get(comment.id);
+    if (comment.parent_comment_id && map.has(comment.parent_comment_id)) {
+      map.get(comment.parent_comment_id).replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+}
+
+function renderCommentItem(comment, depth, postId) {
+  const fullName = comment?.profiles?.full_name || 'User';
+  const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const likesCount = Number.isFinite(comment?.likes_count) ? comment.likes_count : 0;
+  const isLiked = !!comment?.liked_by_user;
+  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
+  const likeClass = isLiked ? 'liked' : '';
+  const safeId = escapeHtml(String(comment?.id || ''));
+  const margin = Math.min(depth, 6) * 16;
+  const replyCount = countReplies(comment);
+  const replyLabel = replyCount === 1 ? 'reply' : 'replies';
+
+  const repliesHtml = (comment.replies || []).map((reply) => renderCommentItem(reply, depth + 1, postId)).join('');
+
+  return `
+    <div class="comment-item" data-comment-id="${safeId}" style="margin-left: ${margin}px;">
+      <div class="d-flex gap-2">
+        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
+        <div class="comment-bubble">
+          <strong class="d-block small">${escapeHtml(fullName)}</strong>
+          <span class="small">${escapeHtml(comment.content || '')}</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn ${likeClass}" data-action="like-comment" data-comment-id="${safeId}">
+              <i class="bi ${likeIcon}"></i>
+              <span>${likesCount}</span>
+            </button>
+            <button class="comment-action-btn" data-action="reply-comment" data-comment-id="${safeId}">Reply</button>
+            ${replyCount ? `<span class="comment-reply-count comment-toggle-replies" data-comment-id="${safeId}">${replyCount} ${replyLabel}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${repliesHtml ? `<div class="comment-replies">${repliesHtml}</div>` : ''}
+    </div>
+  `;
+}
+
+function countReplies(comment) {
+  if (!comment?.replies?.length) return 0;
+
+  return comment.replies.reduce((total, reply) => total + 1 + countReplies(reply), 0);
+}
+
+function toggleReplyForm(commentItem, postId, parentCommentId) {
+  if (!commentItem) return;
+
+  const existing = commentItem.querySelector('.comment-reply-form');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const replyForm = document.createElement('div');
+  replyForm.className = 'comment-reply-form mt-2';
+  replyForm.innerHTML = `
+    <div class="input-group input-group-sm">
+      <input type="text" class="form-control" placeholder="Write a reply...">
+      <button class="btn btn-primary-gradient" type="button" data-action="submit-reply" data-comment-id="${escapeHtml(String(parentCommentId || ''))}">
+        <i class="bi bi-send"></i>
+      </button>
+    </div>
+  `;
+
+  commentItem.querySelector('.comment-bubble')?.appendChild(replyForm);
+  replyForm.querySelector('input')?.focus();
+
+  replyForm.querySelector('input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const submitBtn = replyForm.querySelector('[data-action="submit-reply"]');
+      submitBtn?.click();
+    }
+  });
+}
+
+function toggleReplies(commentItem) {
+  if (!commentItem) return;
+
+  const replies = commentItem.querySelector('.comment-replies');
+  if (!replies) return;
+
+  replies.classList.toggle('d-none');
+}
+
+async function handleCommentLike(button, commentId) {
+  const icon = button.querySelector('i');
+  const countSpan = button.querySelector('span');
+  let count = parseInt(countSpan.textContent, 10) || 0;
+
+  if (button.classList.contains('liked')) {
+    button.classList.remove('liked');
+    icon.classList.remove('bi-heart-fill');
+    icon.classList.add('bi-heart');
+    count--;
+  } else {
+    button.classList.add('liked');
+    icon.classList.remove('bi-heart');
+    icon.classList.add('bi-heart-fill');
+    count++;
+  }
+
+  countSpan.textContent = count;
+
+  try {
+    if (button.classList.contains('liked')) {
+      await likeComment(commentId);
+    } else {
+      await unlikeComment(commentId);
+    }
+  } catch (error) {
+    console.error('Error updating comment like:', error);
+    if (button.classList.contains('liked')) {
+      button.classList.remove('liked');
+      icon.classList.remove('bi-heart-fill');
+      icon.classList.add('bi-heart');
+      count--;
+    } else {
+      button.classList.add('liked');
+      icon.classList.remove('bi-heart');
+      icon.classList.add('bi-heart-fill');
+      count++;
+    }
+    countSpan.textContent = count;
+  }
+}
+
+async function submitReply(input, postId, parentCommentId, commentSection) {
+  const replyText = input.value.trim();
+  if (!replyText) return;
+
+  input.disabled = true;
+
+  try {
+    await createComment(postId, replyText, parentCommentId);
+    input.value = '';
+
+    const postCard = commentSection.closest('.post-card');
+    const commentBtn = postCard.querySelector('[data-action="comment"] span');
+    if (commentBtn) {
+      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
+    }
+
+    await loadComments(postId, commentSection);
+  } catch (error) {
+    console.error('Error creating reply:', error);
+    showToast('Failed to post reply. Please try again.', 'error');
+  } finally {
+    input.disabled = false;
   }
 }
 

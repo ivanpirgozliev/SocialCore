@@ -238,6 +238,56 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
+   Comment Styles
+   ============================================ */
+.comment-section .comment-item {
+  margin-bottom: var(--spacing-sm);
+}
+
+.comment-section .comment-bubble {
+  background-color: var(--gray-50);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  flex-grow: 1;
+}
+
+.comment-section .comment-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.comment-section .comment-action-btn {
+  background: none;
+  border: none;
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+}
+
+.comment-section .comment-action-btn.liked {
+  color: var(--danger);
+}
+
+.comment-section .comment-reply-count {
+  color: var(--gray-400);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.comment-section .comment-replies {
+  margin-top: var(--spacing-sm);
+}
+
+.comment-section .comment-reply-form .form-control {
+  font-size: 0.85rem;
+}
+
+/* ============================================
    Form Styles
    ============================================ */
 .form-control {

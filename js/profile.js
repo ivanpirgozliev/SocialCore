@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -482,6 +482,9 @@ function updatePostsUI(posts, { isOwnProfile } = {}) {
  */
 function createPostCard(post) {
   const relativeTime = formatRelativeTime(new Date(post.created_at));
+  const isLiked = !!post?.liked_by_user;
+  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
+  const likeClass = isLiked ? 'liked' : '';
   
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -497,8 +500,8 @@ function createPostCard(post) {
         ${post.image_url ? `<img src="${post.image_url}" alt="Post image" class="post-image">` : ''}
       </div>
       <div class="post-actions">
-        <button class="post-action-btn" data-action="like">
-          <i class="bi bi-heart"></i>
+        <button class="post-action-btn ${likeClass}" data-action="like">
+          <i class="bi ${likeIcon}"></i>
           <span>${post.likes_count || 0}</span>
         </button>
         <button class="post-action-btn" data-action="comment">
@@ -776,17 +779,19 @@ function initPostActions() {
   const profilePosts = document.querySelectorAll('.post-card');
   
   profilePosts.forEach((postCard) => {
+    const postId = postCard.dataset.postId;
+
     // Like button
     const likeBtn = postCard.querySelector('[data-action="like"]');
     if (likeBtn) {
-      likeBtn.addEventListener('click', () => handleLike(likeBtn));
+      likeBtn.addEventListener('click', () => handleLike(likeBtn, postId));
     }
 
     // Comment button
     const commentBtn = postCard.querySelector('[data-action="comment"]');
     if (commentBtn) {
       commentBtn.addEventListener('click', () => {
-        showToast('Comments feature coming soon!', 'info');
+        handleComment(commentBtn, postId);
       });
     }
 
@@ -804,7 +809,7 @@ function initPostActions() {
  * Handle like button click
  * @param {HTMLElement} button - Like button element
  */
-function handleLike(button) {
+async function handleLike(button, postId) {
   const icon = button.querySelector('i');
   const countSpan = button.querySelector('span');
   let count = parseInt(countSpan.textContent) || 0;
@@ -822,6 +827,337 @@ function handleLike(button) {
   }
 
   countSpan.textContent = count;
+
+  try {
+    if (button.classList.contains('liked')) {
+      await likePost(postId);
+    } else {
+      await unlikePost(postId);
+    }
+  } catch (error) {
+    console.error('Error updating like:', error);
+    if (button.classList.contains('liked')) {
+      button.classList.remove('liked');
+      icon.classList.remove('bi-heart-fill');
+      icon.classList.add('bi-heart');
+      count--;
+    } else {
+      button.classList.add('liked');
+      icon.classList.remove('bi-heart');
+      icon.classList.add('bi-heart-fill');
+      count++;
+    }
+    countSpan.textContent = count;
+  }
+}
+
+/**
+ * Handle comment button click
+ * @param {HTMLElement} button - Comment button element
+ * @param {string} postId - Post ID
+ */
+function handleComment(button, postId) {
+  const postCard = button.closest('.post-card');
+  if (!postCard) return;
+
+  let commentSection = postCard.querySelector('.comment-section');
+  if (commentSection) {
+    commentSection.classList.toggle('d-none');
+    return;
+  }
+
+  commentSection = document.createElement('div');
+  commentSection.className = 'comment-section p-3 border-top';
+  commentSection.dataset.postId = postId;
+
+  const user = getStoredUser();
+  const currentUserAvatarUrl = user?.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+
+  commentSection.innerHTML = `
+    <div class="d-flex gap-2 mb-3">
+      <img src="${currentUserAvatarUrl}" 
+           alt="Profile" class="rounded-circle" width="35" height="35" loading="lazy">
+      <div class="flex-grow-1">
+        <div class="input-group">
+          <input type="text" class="form-control" placeholder="Write a comment...">
+          <button class="btn btn-primary-gradient" type="button">
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="comments-list">
+      <div class="text-muted small">Loading comments...</div>
+    </div>
+  `;
+
+  const postActions = postCard.querySelector('.post-actions');
+  postActions.after(commentSection);
+
+  commentSection.querySelector('input')?.focus();
+  loadComments(postId, commentSection);
+
+  const submitBtn = commentSection.querySelector('button');
+  const input = commentSection.querySelector('input');
+
+  submitBtn.addEventListener('click', () => submitComment(input, postId, commentSection));
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      submitComment(input, postId, commentSection);
+    }
+  });
+
+  commentSection.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('.comment-action-btn');
+    const toggleBtn = e.target.closest('.comment-toggle-replies');
+
+    if (toggleBtn) {
+      const commentId = toggleBtn.dataset.commentId;
+      const selector = `.comment-item[data-comment-id="${CSS.escape(commentId)}"]`;
+      const commentItem = commentSection.querySelector(selector);
+      toggleReplies(commentItem);
+      return;
+    }
+
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.action;
+    const commentId = actionBtn.dataset.commentId;
+
+    if (action === 'like-comment' && commentId) {
+      handleCommentLike(actionBtn, commentId);
+    }
+
+    if (action === 'reply-comment' && commentId) {
+      const commentItem = actionBtn.closest('.comment-item');
+      toggleReplyForm(commentItem, postId, commentId);
+    }
+
+    if (action === 'submit-reply' && commentId) {
+      const replyInput = actionBtn.closest('.comment-reply-form')?.querySelector('input');
+      if (replyInput) {
+        submitReply(replyInput, postId, commentId, commentSection);
+      }
+    }
+  });
+}
+
+async function loadComments(postId, commentSection) {
+  const commentsList = commentSection.querySelector('.comments-list');
+  if (!commentsList) return;
+
+  try {
+    const comments = await getPostComments(postId);
+    if (!comments.length) {
+      commentsList.innerHTML = '<div class="text-muted small">No comments yet.</div>';
+      return;
+    }
+
+    renderCommentsList(comments, commentsList);
+  } catch (error) {
+    console.error('Error loading comments:', error);
+    commentsList.innerHTML = '<div class="text-muted small">Failed to load comments.</div>';
+  }
+}
+
+async function submitComment(input, postId, commentSection) {
+  const commentText = input.value.trim();
+  if (!commentText) return;
+
+  input.disabled = true;
+
+  try {
+    await createComment(postId, commentText, null);
+    input.value = '';
+
+    const postCard = commentSection.closest('.post-card');
+    const commentBtn = postCard.querySelector('[data-action="comment"] span');
+    if (commentBtn) {
+      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
+    }
+
+    await loadComments(postId, commentSection);
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    showToast('Failed to post comment. Please try again.', 'error');
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function renderCommentsList(comments, commentsList) {
+  const tree = buildCommentTree(comments);
+  commentsList.innerHTML = tree.map((comment) => renderCommentItem(comment, 0)).join('');
+}
+
+function buildCommentTree(comments) {
+  const map = new Map();
+  const roots = [];
+
+  comments.forEach((comment) => {
+    map.set(comment.id, { ...comment, replies: [] });
+  });
+
+  comments.forEach((comment) => {
+    const node = map.get(comment.id);
+    if (comment.parent_comment_id && map.has(comment.parent_comment_id)) {
+      map.get(comment.parent_comment_id).replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+}
+
+function renderCommentItem(comment, depth) {
+  const fullName = comment?.profiles?.full_name || 'User';
+  const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const likesCount = Number.isFinite(comment?.likes_count) ? comment.likes_count : 0;
+  const isLiked = !!comment?.liked_by_user;
+  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
+  const likeClass = isLiked ? 'liked' : '';
+  const safeId = escapeHtml(String(comment?.id || ''));
+  const margin = Math.min(depth, 6) * 16;
+  const replyCount = countReplies(comment);
+  const replyLabel = replyCount === 1 ? 'reply' : 'replies';
+
+  const repliesHtml = (comment.replies || []).map((reply) => renderCommentItem(reply, depth + 1)).join('');
+
+  return `
+    <div class="comment-item" data-comment-id="${safeId}" style="margin-left: ${margin}px;">
+      <div class="d-flex gap-2">
+        <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
+        <div class="comment-bubble">
+          <strong class="d-block small">${escapeHtml(fullName)}</strong>
+          <span class="small">${escapeHtml(comment.content || '')}</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn ${likeClass}" data-action="like-comment" data-comment-id="${safeId}">
+              <i class="bi ${likeIcon}"></i>
+              <span>${likesCount}</span>
+            </button>
+            <button class="comment-action-btn" data-action="reply-comment" data-comment-id="${safeId}">Reply</button>
+            ${replyCount ? `<span class="comment-reply-count comment-toggle-replies" data-comment-id="${safeId}">${replyCount} ${replyLabel}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${repliesHtml ? `<div class="comment-replies">${repliesHtml}</div>` : ''}
+    </div>
+  `;
+}
+
+function toggleReplyForm(commentItem, postId, parentCommentId) {
+  if (!commentItem) return;
+
+  const existing = commentItem.querySelector('.comment-reply-form');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const replyForm = document.createElement('div');
+  replyForm.className = 'comment-reply-form mt-2';
+  replyForm.innerHTML = `
+    <div class="input-group input-group-sm">
+      <input type="text" class="form-control" placeholder="Write a reply...">
+      <button class="btn btn-primary-gradient" type="button" data-action="submit-reply" data-comment-id="${escapeHtml(String(parentCommentId || ''))}">
+        <i class="bi bi-send"></i>
+      </button>
+    </div>
+  `;
+
+  commentItem.querySelector('.comment-bubble')?.appendChild(replyForm);
+  replyForm.querySelector('input')?.focus();
+
+  replyForm.querySelector('input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const submitBtn = replyForm.querySelector('[data-action="submit-reply"]');
+      submitBtn?.click();
+    }
+  });
+}
+
+async function handleCommentLike(button, commentId) {
+  const icon = button.querySelector('i');
+  const countSpan = button.querySelector('span');
+  let count = parseInt(countSpan.textContent, 10) || 0;
+
+  if (button.classList.contains('liked')) {
+    button.classList.remove('liked');
+    icon.classList.remove('bi-heart-fill');
+    icon.classList.add('bi-heart');
+    count--;
+  } else {
+    button.classList.add('liked');
+    icon.classList.remove('bi-heart');
+    icon.classList.add('bi-heart-fill');
+    count++;
+  }
+
+  countSpan.textContent = count;
+
+  try {
+    if (button.classList.contains('liked')) {
+      await likeComment(commentId);
+    } else {
+      await unlikeComment(commentId);
+    }
+  } catch (error) {
+    console.error('Error updating comment like:', error);
+    if (button.classList.contains('liked')) {
+      button.classList.remove('liked');
+      icon.classList.remove('bi-heart-fill');
+      icon.classList.add('bi-heart');
+      count--;
+    } else {
+      button.classList.add('liked');
+      icon.classList.remove('bi-heart');
+      icon.classList.add('bi-heart-fill');
+      count++;
+    }
+    countSpan.textContent = count;
+  }
+}
+
+async function submitReply(input, postId, parentCommentId, commentSection) {
+  const replyText = input.value.trim();
+  if (!replyText) return;
+
+  input.disabled = true;
+
+  try {
+    await createComment(postId, replyText, parentCommentId);
+    input.value = '';
+
+    const postCard = commentSection.closest('.post-card');
+    const commentBtn = postCard.querySelector('[data-action="comment"] span');
+    if (commentBtn) {
+      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
+    }
+
+    await loadComments(postId, commentSection);
+  } catch (error) {
+    console.error('Error creating reply:', error);
+    showToast('Failed to post reply. Please try again.', 'error');
+  } finally {
+    input.disabled = false;
+  }
+}
+
+function toggleReplies(commentItem) {
+  if (!commentItem) return;
+
+  const replies = commentItem.querySelector('.comment-replies');
+  if (!replies) return;
+
+  replies.classList.toggle('d-none');
+}
+
+function countReplies(comment) {
+  if (!comment?.replies?.length) return 0;
+
+  return comment.replies.reduce((total, reply) => total + 1 + countReplies(reply), 0);
 }
 
 /**
