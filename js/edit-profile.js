@@ -10,6 +10,7 @@ import { getProfile, updateProfile, uploadProfileImage } from './database.js';
 // Load Profile Data on Page Load
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
+  initBirthdayPicker();
   await loadProfileData();
   initCharacterCounter();
   initImagePreviews();
@@ -49,8 +50,8 @@ async function loadProfileData() {
     }
     
     // Birthday
-    if (document.getElementById('birthday') && profile?.birthday) {
-      document.getElementById('birthday').value = profile.birthday;
+    if (profile?.birthday) {
+      setBirthdayPickerValue(profile.birthday);
     }
     
     // Gender
@@ -111,6 +112,93 @@ async function loadProfileData() {
     console.error('Error loading profile:', error);
     showToast('Failed to load profile data', 'error');
   }
+}
+
+// ============================================
+// Birthday Picker
+// ============================================
+function initBirthdayPicker() {
+  const daySelect = document.getElementById('birthdayDay');
+  const monthSelect = document.getElementById('birthdayMonth');
+  const yearSelect = document.getElementById('birthdayYear');
+
+  if (!daySelect || !monthSelect || !yearSelect) return;
+
+  monthSelect.innerHTML = buildPlaceholderOption('Month') + buildMonthOptions();
+  yearSelect.innerHTML = buildPlaceholderOption('Year') + buildYearOptions();
+  updateDayOptions();
+
+  monthSelect.addEventListener('change', updateDayOptions);
+  yearSelect.addEventListener('change', updateDayOptions);
+
+  function updateDayOptions() {
+    const selectedDay = daySelect.value;
+    const month = parseInt(monthSelect.value, 10);
+    const year = parseInt(yearSelect.value, 10);
+    const daysInMonth = getDaysInMonth(year, month);
+
+    daySelect.innerHTML = buildPlaceholderOption('Day') + buildDayOptions(daysInMonth);
+    if (selectedDay) {
+      daySelect.value = selectedDay;
+    }
+  }
+}
+
+function buildPlaceholderOption(label) {
+  return `<option value="">${label}</option>`;
+}
+
+function buildDayOptions(count) {
+  let options = '';
+  for (let day = 1; day <= count; day++) {
+    options += `<option value="${day}">${String(day).padStart(2, '0')}</option>`;
+  }
+  return options;
+}
+
+function buildMonthOptions() {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months.map((label, index) => {
+    const value = index + 1;
+    return `<option value="${value}">${label}</option>`;
+  }).join('');
+}
+
+function buildYearOptions() {
+  const currentYear = new Date().getFullYear();
+  const startYear = currentYear - 110;
+  const endYear = currentYear - 10;
+  let options = '';
+  for (let year = endYear; year >= startYear; year--) {
+    options += `<option value="${year}">${year}</option>`;
+  }
+  return options;
+}
+
+function getDaysInMonth(year, month) {
+  if (!year || !month) return 31;
+  return new Date(year, month, 0).getDate();
+}
+
+function setBirthdayPickerValue(isoDate) {
+  const daySelect = document.getElementById('birthdayDay');
+  const monthSelect = document.getElementById('birthdayMonth');
+  const yearSelect = document.getElementById('birthdayYear');
+
+  if (!daySelect || !monthSelect || !yearSelect) return;
+
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return;
+
+  const year = parsed.getFullYear();
+  const month = parsed.getMonth() + 1;
+  const day = parsed.getDate();
+
+  monthSelect.value = String(month);
+  yearSelect.value = String(year);
+  const daysInMonth = getDaysInMonth(year, month);
+  daySelect.innerHTML = buildPlaceholderOption('Day') + buildDayOptions(daysInMonth);
+  daySelect.value = String(day);
 }
 
 // ============================================
@@ -218,7 +306,8 @@ function initFormSubmit() {
       const location = document.getElementById('location')?.value || '';
       const website = document.getElementById('website')?.value || '';
       const phone = document.getElementById('phone')?.value || '';
-      const birthday = document.getElementById('birthday')?.value || null;
+      const birthday = getBirthdayPickerValue();
+      if (birthday === undefined) return;
       const work = document.getElementById('work')?.value || '';
       const education = document.getElementById('education')?.value || '';
       const relationship = document.getElementById('relationship')?.value || '';
@@ -326,4 +415,33 @@ function initFormSubmit() {
       }
     });
   }
+}
+
+function getBirthdayPickerValue() {
+  const day = document.getElementById('birthdayDay')?.value;
+  const month = document.getElementById('birthdayMonth')?.value;
+  const year = document.getElementById('birthdayYear')?.value;
+
+  if (!day && !month && !year) return null;
+
+  if (!day || !month || !year) {
+    showToast('Please select day, month, and year', 'warning');
+    return undefined;
+  }
+
+  const isoValue = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const parsed = new Date(isoValue);
+  if (Number.isNaN(parsed.getTime())) {
+    showToast('Please select a valid date', 'warning');
+    return undefined;
+  }
+
+  if (parsed.getUTCFullYear() !== parseInt(year, 10)
+      || parsed.getUTCMonth() + 1 !== parseInt(month, 10)
+      || parsed.getUTCDate() !== parseInt(day, 10)) {
+    showToast('Please select a valid date', 'warning');
+    return undefined;
+  }
+
+  return isoValue;
 }

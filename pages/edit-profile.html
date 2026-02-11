@@ -198,7 +198,12 @@
                 <!-- Birthday -->
                 <div class="mb-3">
                   <label for="birthday" class="form-label">Birthday</label>
-                  <input type="date" class="form-control" id="birthday" name="birthday">
+                  <div class="birthday-picker" id="birthdayPicker">
+                    <select class="form-select" id="birthdayDay" name="birthdayDay" aria-label="Day"></select>
+                    <select class="form-select" id="birthdayMonth" name="birthdayMonth" aria-label="Month"></select>
+                    <select class="form-select" id="birthdayYear" name="birthdayYear" aria-label="Year"></select>
+                  </div>
+                  <div class="form-text">Format: DD MMM YYYY</div>
                 </div>
                 
                 <!-- Gender -->
