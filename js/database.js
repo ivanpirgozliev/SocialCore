@@ -487,6 +487,339 @@ export async function getFollowing(userId) {
 }
 
 // ============================================
+// FRIEND REQUESTS
+// ============================================
+
+async function getAcceptedFriendIdsForUser(userId) {
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+
+  if (error) throw error;
+
+  const ids = new Set();
+  (data || []).forEach((row) => {
+    const otherId = row.requester_id === userId ? row.addressee_id : row.requester_id;
+    if (otherId) ids.add(otherId);
+  });
+
+  return ids;
+}
+
+/**
+ * Send a friend request
+ * @param {string} userId - User ID to add
+ */
+export async function sendFriendRequest(userId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('friend_requests')
+    .insert([
+      {
+        requester_id: user.id,
+        addressee_id: userId,
+        status: 'pending',
+      }
+    ]);
+
+  if (error) throw error;
+}
+
+/**
+ * Cancel a pending friend request (by target user id)
+ * @param {string} userId - User ID to cancel request for
+ */
+export async function cancelFriendRequest(userId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('friend_requests')
+    .delete()
+    .eq('status', 'pending')
+    .eq('requester_id', user.id)
+    .eq('addressee_id', userId);
+
+  if (error) throw error;
+}
+
+/**
+ * Accept a friend request (by request id)
+ * @param {string} requestId - Request ID
+ */
+export async function acceptFriendRequest(requestId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('friend_requests')
+    .update({ status: 'accepted' })
+    .eq('id', requestId)
+    .eq('addressee_id', user.id);
+
+  if (error) throw error;
+}
+
+/**
+ * Decline a friend request (by request id)
+ * @param {string} requestId - Request ID
+ */
+export async function declineFriendRequest(requestId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('friend_requests')
+    .update({ status: 'declined' })
+    .eq('id', requestId)
+    .eq('addressee_id', user.id);
+
+  if (error) throw error;
+}
+
+/**
+ * Remove an accepted friend relationship (by user id)
+ * @param {string} userId - Friend user ID
+ */
+export async function removeFriend(userId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('friend_requests')
+    .delete()
+    .eq('status', 'accepted')
+    .or(
+      `and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`
+    );
+
+  if (error) throw error;
+}
+
+/**
+ * Get pending friend requests for the current user (incoming)
+ * @returns {Promise<Array>} Array of requester profiles
+ */
+export async function getFriendRequests() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select(`
+      id,
+      created_at,
+      requester_id,
+      profiles:requester_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('addressee_id', user.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => ({
+    ...row.profiles,
+    request_id: row.id,
+    requested_at: row.created_at,
+  }));
+}
+
+/**
+ * Get pending friend requests sent by the current user (outgoing)
+ * @returns {Promise<Array>} Array of addressee profiles
+ */
+export async function getOutgoingFriendRequests() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select(`
+      id,
+      created_at,
+      addressee_id,
+      profiles:addressee_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('requester_id', user.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => ({
+    ...row.profiles,
+    request_id: row.id,
+    requested_at: row.created_at,
+  }));
+}
+
+/**
+ * Get accepted friends for the current user
+ * @returns {Promise<Array>} Array of friend profiles
+ */
+export async function getFriendsList() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select(`
+      id,
+      requester_id,
+      addressee_id,
+      requester:requester_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      addressee:addressee_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => {
+    const isRequester = row.requester_id === user.id;
+    const friendProfile = isRequester ? row.addressee : row.requester;
+    return {
+      ...friendProfile,
+      friendship_id: row.id,
+    };
+  });
+}
+
+/**
+ * Get relationship status with a specific user
+ * @param {string} userId - Target user ID
+ * @returns {Promise<{ status: string, direction?: string, requestId?: string }>} Relationship status
+ */
+export async function getFriendRelationship(userId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select('id, requester_id, addressee_id, status')
+    .or(
+      `and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`
+    )
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return { status: 'none' };
+
+  const direction = data.requester_id === user.id ? 'outgoing' : 'incoming';
+  return {
+    status: data.status,
+    direction,
+    requestId: data.id,
+  };
+}
+
+/**
+ * Get friend suggestions for the current user
+ * @param {number} limit - Number of suggestions
+ * @returns {Promise<Array>} Array of suggested profiles
+ */
+export async function getFriendSuggestions(limit = 5) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: requestRows, error: requestError } = await supabase
+    .from('friend_requests')
+    .select('requester_id, addressee_id, status')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .in('status', ['pending', 'accepted']);
+
+  if (requestError) throw requestError;
+
+  const excludedIds = new Set([user.id]);
+  (requestRows || []).forEach((row) => {
+    const otherId = row.requester_id === user.id ? row.addressee_id : row.requester_id;
+    if (otherId) excludedIds.add(otherId);
+  });
+
+  let query = supabase
+    .from('profiles')
+    .select('id, username, full_name, avatar_url')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (excludedIds.size) {
+    const excluded = Array.from(excludedIds).map((id) => `"${id}"`).join(',');
+    query = query.not('id', 'in', `(${excluded})`);
+  }
+
+  const { data: profiles, error } = await query;
+  if (error) throw error;
+
+  const suggestions = profiles || [];
+  if (!suggestions.length) return [];
+
+  const friendSet = await getAcceptedFriendIdsForUser(user.id);
+  if (!friendSet.size) {
+    return suggestions.map((profile) => ({ ...profile, mutual_friends: 0 }));
+  }
+
+  const profileIds = suggestions.map((profile) => profile.id).filter(Boolean);
+  if (!profileIds.length) {
+    return suggestions.map((profile) => ({ ...profile, mutual_friends: 0 }));
+  }
+
+  const profileIdsCsv = profileIds.map((id) => `"${id}"`).join(',');
+
+  const { data: acceptedRows, error: acceptedError } = await supabase
+    .from('friend_requests')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.in.(${profileIdsCsv}),addressee_id.in.(${profileIdsCsv})`);
+
+  if (acceptedError) throw acceptedError;
+
+  const mutualCounts = new Map();
+  (acceptedRows || []).forEach((row) => {
+    if (profileIds.includes(row.requester_id)) {
+      if (friendSet.has(row.addressee_id)) {
+        mutualCounts.set(row.requester_id, (mutualCounts.get(row.requester_id) || 0) + 1);
+      }
+    }
+    if (profileIds.includes(row.addressee_id)) {
+      if (friendSet.has(row.requester_id)) {
+        mutualCounts.set(row.addressee_id, (mutualCounts.get(row.addressee_id) || 0) + 1);
+      }
+    }
+  });
+
+  return suggestions.map((profile) => ({
+    ...profile,
+    mutual_friends: mutualCounts.get(profile.id) || 0,
+  }));
+}
+
+// ============================================
 // PROFILES
 // ============================================
 
@@ -537,6 +870,68 @@ export async function updateProfile(userId, updates) {
     .eq('id', userId);
 
   if (error) throw error;
+}
+
+/**
+ * Get suggested users to follow (exclude self and already-followed users)
+ * @param {number} limit - Number of suggestions to fetch
+ * @returns {Promise<Array>} Array of user profiles
+ */
+export async function getSuggestedUsers(limit = 5) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: followingRows, error: followingError } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', user.id);
+
+  if (followingError) throw followingError;
+
+  const followingIds = (followingRows || [])
+    .map((row) => row.following_id)
+    .filter(Boolean);
+
+  const followingSet = new Set(followingIds);
+
+  let query = supabase
+    .from('profiles')
+    .select('id, username, full_name, avatar_url')
+    .neq('id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (followingIds.length) {
+    const excluded = followingIds.map((id) => `"${id}"`).join(',');
+    query = query.not('id', 'in', `(${excluded})`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const profiles = data || [];
+  if (!profiles.length) return [];
+
+  const profileIds = profiles.map((profile) => profile.id).filter(Boolean);
+  if (!profileIds.length) return profiles.map((profile) => ({ ...profile, mutual_friends: 0 }));
+
+  const { data: suggestedFollowing, error: suggestedError } = await supabase
+    .from('follows')
+    .select('follower_id, following_id')
+    .in('follower_id', profileIds);
+
+  if (suggestedError) throw suggestedError;
+
+  const mutualCounts = new Map();
+  (suggestedFollowing || []).forEach((row) => {
+    if (!followingSet.has(row.following_id)) return;
+    mutualCounts.set(row.follower_id, (mutualCounts.get(row.follower_id) || 0) + 1);
+  });
+
+  return profiles.map((profile) => ({
+    ...profile,
+    mutual_friends: mutualCounts.get(profile.id) || 0,
+  }));
 }
 
 /**

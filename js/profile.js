@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -63,9 +63,14 @@ function applyProfileViewMode() {
   }
 
   const editProfileBtn = document.querySelector('.btn-primary-gradient');
-  if (editProfileBtn && editProfileBtn.textContent.includes('Edit Profile')) {
+  const editProfileBtnById = document.getElementById('editProfileBtn');
+  if (editProfileBtnById) editProfileBtnById.classList.toggle('d-none', !isOwnProfile);
+  if (!editProfileBtnById && editProfileBtn && editProfileBtn.textContent.includes('Edit Profile')) {
     editProfileBtn.classList.toggle('d-none', !isOwnProfile);
   }
+
+  const friendActions = document.getElementById('profileFriendActions');
+  if (friendActions) friendActions.classList.toggle('d-none', isOwnProfile);
 
   const editCoverBtn = document.querySelector('.profile-cover-edit-btn');
   if (editCoverBtn) editCoverBtn.classList.toggle('d-none', !isOwnProfile);
@@ -123,6 +128,8 @@ async function loadUserProfile() {
     
     // Update UI with real data
     updateProfileUI(profile);
+
+    await initFriendActions();
     
     // Load user posts
     const posts = await getUserPosts(requestedProfileUserId);
@@ -158,6 +165,130 @@ async function loadUserProfile() {
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
     updateProfileUIFromLocalStorage(userData);
   }
+}
+
+async function initFriendActions() {
+  const container = document.getElementById('profileFriendActions');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (profileView.isOwnProfile || !profileView.profileUserId) return;
+
+  try {
+    const relationship = await getFriendRelationship(profileView.profileUserId);
+    renderFriendActions(container, relationship);
+  } catch (error) {
+    console.error('Error loading friend actions:', error);
+  }
+}
+
+function renderFriendActions(container, relationship) {
+  const status = relationship?.status || 'none';
+  const direction = relationship?.direction || 'none';
+  const requestId = relationship?.requestId;
+
+  if (status === 'accepted') {
+    const friendsBtn = buildActionButton('<i class="bi bi-people me-1"></i>Friends', 'btn-outline-secondary', true, true);
+    const unfriendBtn = buildActionButton('<i class="bi bi-person-dash me-1"></i>Unfriend', 'btn-outline-danger', false, true);
+    unfriendBtn.addEventListener('click', async () => {
+      unfriendBtn.disabled = true;
+      try {
+        await removeFriend(profileView.profileUserId);
+        showToast('Friend removed.', 'info');
+        initFriendActions();
+      } catch (error) {
+        console.error('Error removing friend:', error);
+        unfriendBtn.disabled = false;
+        showToast('Failed to remove friend.', 'error');
+      }
+    });
+    container.appendChild(friendsBtn);
+    container.appendChild(unfriendBtn);
+    return;
+  }
+
+  if (status === 'pending' && direction === 'incoming') {
+    const acceptBtn = buildActionButton('<i class="bi bi-check-lg me-1"></i>Accept Friend', 'btn-primary-gradient', false, true);
+    const declineBtn = buildActionButton('<i class="bi bi-x-lg me-1"></i>Decline', 'btn-outline-secondary', false, true);
+
+    acceptBtn.addEventListener('click', async () => {
+      acceptBtn.disabled = true;
+      try {
+        await acceptFriendRequest(requestId);
+        showToast('Friend request accepted.', 'success');
+        initFriendActions();
+      } catch (error) {
+        console.error('Error accepting friend request:', error);
+        acceptBtn.disabled = false;
+        showToast('Failed to accept request.', 'error');
+      }
+    });
+
+    declineBtn.addEventListener('click', async () => {
+      declineBtn.disabled = true;
+      try {
+        await declineFriendRequest(requestId);
+        showToast('Friend request declined.', 'info');
+        initFriendActions();
+      } catch (error) {
+        console.error('Error declining friend request:', error);
+        declineBtn.disabled = false;
+        showToast('Failed to decline request.', 'error');
+      }
+    });
+
+    container.appendChild(acceptBtn);
+    container.appendChild(declineBtn);
+    return;
+  }
+
+  if (status === 'pending' && direction === 'outgoing') {
+    const sentBtn = buildActionButton('<i class="bi bi-clock me-1"></i>Request Sent', 'btn-outline-secondary', true, true);
+    const cancelBtn = buildActionButton('<i class="bi bi-x-circle me-1"></i>Cancel Request', 'btn-outline-secondary', false, true);
+    cancelBtn.addEventListener('click', async () => {
+      cancelBtn.disabled = true;
+      try {
+        await cancelFriendRequest(profileView.profileUserId);
+        showToast('Friend request canceled.', 'info');
+        initFriendActions();
+      } catch (error) {
+        console.error('Error canceling friend request:', error);
+        cancelBtn.disabled = false;
+        showToast('Failed to cancel request.', 'error');
+      }
+    });
+    container.appendChild(sentBtn);
+    container.appendChild(cancelBtn);
+    return;
+  }
+
+  const addBtn = buildActionButton('<i class="bi bi-person-plus me-1"></i>Add Friend', 'btn-primary-gradient', false, true);
+  addBtn.addEventListener('click', async () => {
+    addBtn.disabled = true;
+    try {
+      await sendFriendRequest(profileView.profileUserId);
+      showToast('Friend request sent.', 'success');
+      initFriendActions();
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      addBtn.disabled = false;
+      showToast('Failed to send request.', 'error');
+    }
+  });
+  container.appendChild(addBtn);
+}
+
+function buildActionButton(label, className, disabled = false, allowHtml = false) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `btn ${className}`;
+  if (allowHtml) {
+    button.innerHTML = label;
+  } else {
+    button.textContent = label;
+  }
+  button.disabled = disabled;
+  return button;
 }
 
 function buildUserPhotosPrefix(userId) {
@@ -485,6 +616,8 @@ function createPostCard(post) {
   const isLiked = !!post?.liked_by_user;
   const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
   const likeClass = isLiked ? 'liked' : '';
+  const commentsCount = post.comments_count || 0;
+  const commentClass = commentsCount > 0 ? 'has-comments' : '';
   
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -504,9 +637,9 @@ function createPostCard(post) {
           <i class="bi ${likeIcon}"></i>
           <span>${post.likes_count || 0}</span>
         </button>
-        <button class="post-action-btn" data-action="comment">
+        <button class="post-action-btn ${commentClass}" data-action="comment">
           <i class="bi bi-chat"></i>
-          <span>${post.comments_count || 0}</span>
+          <span>${commentsCount}</span>
         </button>
         <button class="post-action-btn" data-action="share">
           <i class="bi bi-share"></i>

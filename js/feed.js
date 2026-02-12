@@ -4,7 +4,7 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
-import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment } from './database.js';
+import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, sendFriendRequest, cancelFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 let feedOffset = 0;
@@ -16,6 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load initial feed posts
   loadInitialFeedPosts();
+
+  // Load people you may know suggestions
+  initPeopleYouMayKnow();
+
+  // Initialize follow actions
+  initPeopleYouMayKnowActions();
 
   // Initialize post actions (like, comment, share)
   initPostActions();
@@ -106,6 +112,7 @@ function createFeedPostHtml(post) {
   const isLiked = !!post?.liked_by_user;
   const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
   const likeClass = isLiked ? 'liked' : '';
+  const commentClass = commentsCount > 0 ? 'has-comments' : '';
 
   return `
     <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}">
@@ -136,7 +143,7 @@ function createFeedPostHtml(post) {
           <i class="bi ${likeIcon}"></i>
           <span>${likesCount}</span>
         </button>
-        <button class="post-action-btn" data-action="comment" type="button" aria-label="Comment">
+        <button class="post-action-btn ${commentClass}" data-action="comment" type="button" aria-label="Comment">
           <i class="bi bi-chat"></i>
           <span>${commentsCount}</span>
         </button>
@@ -192,6 +199,132 @@ async function initCurrentUserFeedUI() {
     const firstName = (user.name || '').trim().split(' ')[0];
     createPostPrompt.textContent = firstName ? `What's on your mind, ${firstName}?` : "What's on your mind?";
   }
+}
+
+async function initPeopleYouMayKnow() {
+  const list = document.getElementById('peopleYouMayKnowList');
+  if (!list) return;
+
+  list.innerHTML = '<div class="text-muted small">Loading suggestions...</div>';
+
+  try {
+    const suggestions = await getFriendSuggestions(8);
+    if (!suggestions.length) {
+      list.innerHTML = '<div class="text-muted small">No suggestions right now.</div>';
+      list.classList.remove('has-overflow');
+      return;
+    }
+
+    list.innerHTML = suggestions.map((user) => buildSuggestionHtml(user)).join('');
+    setupScrollHint(list);
+  } catch (error) {
+    console.error('Error loading suggestions:', error);
+    list.innerHTML = '<div class="text-muted small">Failed to load suggestions.</div>';
+    list.classList.remove('has-overflow');
+  }
+}
+
+function setupScrollHint(list) {
+  if (!list) return;
+
+  const container = list.parentElement;
+  if (!container) return;
+  container.classList.add('scroll-hint-container');
+
+  let hint = container.querySelector('.scroll-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.className = 'scroll-hint';
+    hint.textContent = '▼';
+    container.appendChild(hint);
+  }
+
+  const update = () => {
+    const hasOverflow = list.scrollHeight > list.clientHeight + 1;
+    const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+    container.classList.toggle('has-overflow', hasOverflow);
+    container.classList.toggle('at-bottom', !hasOverflow || atBottom);
+  };
+
+  update();
+
+  if (list.dataset.scrollHintBound === 'true') return;
+  list.dataset.scrollHintBound = 'true';
+
+  list.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+}
+
+function initPeopleYouMayKnowActions() {
+  const list = document.getElementById('peopleYouMayKnowList');
+  if (!list) return;
+
+  list.addEventListener('click', async (e) => {
+    const button = e.target.closest('[data-action="add-friend"]');
+    if (!button) return;
+
+    const userId = button.dataset.userId;
+    if (!userId) return;
+    const state = button.dataset.state || 'none';
+
+    const originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Working';
+
+    try {
+      if (state === 'pending') {
+        await cancelFriendRequest(userId);
+        button.dataset.state = 'none';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-primary-gradient');
+        button.innerHTML = '<i class="bi bi-person-plus me-1"></i>Add Friend';
+        showToast('Friend request canceled.', 'info');
+      } else {
+        await sendFriendRequest(userId);
+        button.dataset.state = 'pending';
+        button.classList.remove('btn-primary-gradient');
+        button.classList.add('btn-outline-secondary');
+        button.innerHTML = '<i class="bi bi-x-circle me-1"></i>Cancel Request';
+        showToast('Friend request sent.', 'success');
+      }
+    } catch (error) {
+      console.error('Error updating friend request:', error);
+      button.disabled = false;
+      button.innerHTML = originalHtml;
+      showToast('Failed to update friend request. Please try again.', 'error');
+      return;
+    }
+
+    button.disabled = false;
+  });
+}
+
+function buildSuggestionHtml(user) {
+  const fullName = user?.full_name || user?.username || 'User';
+  const username = user?.username || 'user';
+  const profileHref = user?.id ? `profile.html?id=${encodeURIComponent(user.id)}` : 'profile.html';
+  const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const mutualFriends = Number.isFinite(user?.mutual_friends) ? user.mutual_friends : 0;
+  const mutualLabel = mutualFriends === 1 ? 'mutual friend' : 'mutual friends';
+
+  return `
+    <div class="suggestion-card" data-user-id="${escapeHtml(String(user?.id || ''))}">
+      <div class="suggestion-card-body">
+        <div class="friend-item">
+          <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
+            <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="friend-avatar" loading="lazy">
+          </a>
+          <div class="flex-grow-1">
+            <a href="${escapeHtml(profileHref)}" class="friend-name mb-0 text-decoration-none">${escapeHtml(fullName)}</a>
+            <small class="text-muted d-block mutual-friends">${mutualFriends} ${mutualLabel}</small>
+          </div>
+        </div>
+        <button class="btn btn-primary-gradient btn-sm suggestion-action" type="button" data-action="add-friend" data-state="none" data-user-id="${escapeHtml(String(user?.id || ''))}">
+          <i class="bi bi-person-plus me-1"></i>Add Friend
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 /**
