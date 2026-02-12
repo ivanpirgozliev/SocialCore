@@ -14,6 +14,7 @@ export default defineConfig({
         login: resolve(__dirname, 'pages/login.html'),
         register: resolve(__dirname, 'pages/register.html'),
         feed: resolve(__dirname, 'pages/feed.html'),
+        messages: resolve(__dirname, 'pages/messages.html'),
         profile: resolve(__dirname, 'pages/profile.html'),
         photos: resolve(__dirname, 'pages/photos.html'),
         friends: resolve(__dirname, 'pages/friends.html'),

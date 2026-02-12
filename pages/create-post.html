@@ -58,15 +58,16 @@
         <div class="d-flex align-items-center me-3 gap-2">
           <!-- Messages -->
           <div class="dropdown">
-            <button class="btn btn-link text-muted position-relative p-2" type="button" data-bs-toggle="dropdown">
+            <button class="btn btn-link text-muted position-relative p-2" type="button" data-bs-toggle="dropdown" id="messagesToggle">
               <i class="bi bi-chat-dots fs-5"></i>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="messagesBadge">0</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+            <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;" id="messagesMenu">
               <li class="dropdown-header">Messages</li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item py-2 text-center text-muted">No new messages</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-center text-primary" href="#">See all messages</a></li>
+              <li><a class="dropdown-item text-center text-primary" href="messages.html" data-action="open-messaging">See all messages</a></li>
             </ul>
           </div>
           <!-- Notifications -->

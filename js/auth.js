@@ -37,15 +37,11 @@ function initLoginForm(form) {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
-      // For development - ignore email confirmation errors
-      if (error && error.message !== 'Email not confirmed') {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Check if we have a user (even if email not confirmed)
-      if (!data.user) {
-        throw new Error('Login failed. Please check your credentials.');
+      // A real session is required for all RLS-protected features (messaging, friends, etc.)
+      if (!data?.session || !data?.user) {
+        throw new Error('Login incomplete. Please confirm your email address and try again.');
       }
 
       if (rememberMe) {
@@ -144,7 +140,15 @@ function initRegisterForm(form) {
         return;
       }
 
-      // Save user data and redirect to feed (skip email confirmation for development)
+      // If email confirmations are enabled, Supabase won't provide a session here.
+      // RLS-protected features require a real session.
+      if (!data?.session) {
+        showToast('Account created! Please confirm your email, then log in to continue.', 'info');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        return;
+      }
+
       const newUserData = {
         id: data.user.id,
         email: data.user.email,
@@ -154,7 +158,7 @@ function initRegisterForm(form) {
       };
       localStorage.setItem('socialcore_user', JSON.stringify(newUserData));
 
-      showToast('Account created successfully! Welcome to SocialCore!', 'success');
+      showToast('Account created successfully! Redirecting...', 'success');
       setTimeout(() => { window.location.href = 'feed.html'; }, 1500);
     } catch (error) {
       showToast(error.message || 'Registration failed. Please try again.', 'error');

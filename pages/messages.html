@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Photos - SocialCore">
-  <title>Photos - SocialCore</title>
+  <meta name="description" content="Messages - Chat with your friends on SocialCore">
+  <title>Messages - SocialCore</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
@@ -22,21 +22,17 @@
        ============================================ -->
   <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
-      <!-- Brand Logo -->
       <a class="navbar-brand" href="../index.html">
         <img src="../assets/images/logo.svg" alt="SocialCore Logo" height="40">
         SocialCore
       </a>
 
-      <!-- Mobile Toggle Button -->
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
               aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <!-- Navigation Links -->
       <div class="collapse navbar-collapse" id="navbarNav">
-        <!-- Search Bar -->
         <form class="d-flex me-auto" role="search">
           <div class="input-group">
             <span class="input-group-text bg-white border-end-0">
@@ -57,22 +53,21 @@
             <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;" id="messagesMenu">
               <li class="dropdown-header">Messages</li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item py-2 text-center text-muted">No new messages</a></li>
+              <li><a class="dropdown-item py-2 text-center text-muted">Loading...</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item text-center text-primary" href="messages.html" data-action="open-messaging">See all messages</a></li>
             </ul>
           </div>
-          <!-- Notifications -->
+          <!-- Notifications (kept minimal here) -->
           <div class="dropdown">
             <button class="btn btn-link text-muted position-relative p-2" type="button" data-bs-toggle="dropdown">
               <i class="bi bi-bell fs-5"></i>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notificationsBadge">0</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" style="width: 320px;">
+            <ul class="dropdown-menu dropdown-menu-end" style="width: 320px;" id="notificationsMenu">
               <li class="dropdown-header">Notifications</li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item py-2 text-center text-muted">No new notifications</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-center text-primary" href="#">See all notifications</a></li>
+              <li><a class="dropdown-item py-2 text-center text-muted">Loading...</a></li>
             </ul>
           </div>
         </div>
@@ -81,10 +76,9 @@
         <div class="dropdown">
           <button class="btn btn-link text-decoration-none dropdown-toggle" type="button"
                   id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-              <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="navbar-avatar js-navbar-avatar" width="35" height="35" loading="lazy">
+            <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="navbar-avatar js-navbar-avatar" width="35" height="35" loading="lazy">
           </button>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-            <li><a class="dropdown-item" href="feed.html"><i class="bi bi-newspaper me-2"></i>Feed</a></li>
             <li><a class="dropdown-item" href="profile.html"><i class="bi bi-person me-2"></i>Profile</a></li>
             <li><a class="dropdown-item" href="settings.html"><i class="bi bi-gear me-2"></i>Settings</a></li>
             <li><hr class="dropdown-divider"></li>
@@ -96,71 +90,52 @@
   </nav>
 
   <!-- ============================================
-       Photos Content
+       Messages Page
        ============================================ -->
-  <main class="py-4" style="background-color: #cfd5dc;">
+  <main class="py-4" style="background-color: #cfd5dc; min-height: calc(100vh - 76px);">
     <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Photos</h2>
-        <a id="photosBackToProfileLink" href="profile.html" class="btn btn-outline-primary btn-sm">
-          <i class="bi bi-arrow-left me-1"></i>Back to Profile
-        </a>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Messages</h4>
+        <button class="btn btn-outline-primary btn-sm" type="button" id="messagesNewBtn">
+          <i class="bi bi-pencil-square me-1"></i>New message
+        </button>
       </div>
 
-      <!-- Upload Card -->
-      <div id="photosUploadCard" class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title mb-3">
-            <i class="bi bi-cloud-upload me-2 text-primary-blue"></i>Upload photos
-          </h5>
-
-          <form id="uploadPhotosForm" class="row g-3" novalidate>
-            <div class="col-12">
-              <input id="photosInput" class="d-none" type="file" accept="image/*" multiple required>
-              <label for="photosInput" class="upload-dropzone" role="button">
-                <div class="upload-dropzone-icon">
-                  <i class="bi bi-cloud-arrow-up"></i>
-                </div>
-                <div class="upload-dropzone-text">
-                  <strong>Drop photos here</strong>
-                  <span>or click to browse</span>
-                </div>
-                <div class="upload-dropzone-meta">PNG, JPG, GIF up to 10MB</div>
-              </label>
-              <div class="upload-files-summary" id="photosFilesSummary">No files selected</div>
-              <div class="upload-files-list" id="photosFilesList"></div>
-              <div class="upload-preview-grid" id="photosPreviewGrid"></div>
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header bg-white">
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="messagesSearch" placeholder="Search conversations" autocomplete="off">
+              </div>
             </div>
-            <div class="col-12 d-flex flex-wrap gap-2">
-              <button id="uploadPhotosBtn" type="submit" class="btn btn-primary-gradient">
-                <i class="bi bi-upload me-1"></i>Upload
-              </button>
-              <button id="clearPhotosBtn" type="button" class="btn btn-outline-primary">
-                <i class="bi bi-x-circle me-1"></i>Clear selection
-              </button>
+            <div class="list-group list-group-flush" id="messagesConversationsList">
+              <div class="p-3 text-muted small">Loading...</div>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
 
-      <!-- Gallery Card -->
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 id="photosGalleryTitle" class="card-title mb-0">
-              <i class="bi bi-images me-2 text-primary-blue"></i>Your photos
-            </h5>
-            <button id="refreshPhotosBtn" class="btn btn-outline-primary btn-sm" type="button">
-              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-            </button>
+        <div class="col-lg-8">
+          <div class="card" style="height: 70vh;">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+              <div class="fw-semibold" id="messagesConversationTitle">Select a conversation</div>
+              <button class="btn btn-link text-muted p-0" type="button" id="messagesOpenDrawerBtn" title="Open drawer">
+                <i class="bi bi-box-arrow-up-right"></i>
+              </button>
+            </div>
+
+            <div class="card-body" id="messagesThread" style="overflow:auto; background-color: var(--gray-50);">
+              <div class="text-muted small">No conversation selected.</div>
+            </div>
+
+            <div class="card-footer bg-white">
+              <form id="messagesForm" class="d-flex gap-2">
+                <input class="form-control" id="messagesInput" placeholder="Write a message..." autocomplete="off" disabled>
+                <button class="btn btn-primary" type="submit" disabled>Send</button>
+              </form>
+            </div>
           </div>
-
-          <div id="photosEmptyState" class="text-center py-4 d-none">
-            <i class="bi bi-images fs-1 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No photos yet</p>
-          </div>
-
-          <div id="photosGrid" class="row g-3"></div>
         </div>
       </div>
     </div>
@@ -168,9 +143,7 @@
 
   <!-- Bootstrap 5 JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Main JS -->
-  <script type="module" src="../js/main.js"></script>
-  <!-- Photos JS -->
-  <script type="module" src="../js/photos.js"></script>
+  <!-- Messages JavaScript -->
+  <script type="module" src="../js/messages.js"></script>
 </body>
 </html>

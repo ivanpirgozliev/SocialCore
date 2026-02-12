@@ -80,6 +80,128 @@ body {
 }
 
 /* ============================================
+   Messaging Drawer
+   ============================================ */
+.messaging-drawer {
+  position: fixed;
+  right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+  width: 340px;
+  max-width: calc(100vw - (var(--spacing-lg) * 2));
+  height: 520px;
+  max-height: 70vh;
+  display: none;
+  flex-direction: column;
+  background-color: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 1055;
+}
+
+.messaging-drawer.open {
+  display: flex;
+}
+
+.messaging-drawer-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.messaging-thread {
+  height: 100%;
+  overflow: auto;
+}
+
+.messaging-bubble {
+  max-width: 82%;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  background-color: var(--gray-50);
+}
+
+.messaging-bubble--mine {
+  border: 0;
+  background: var(--primary-gradient);
+  color: white;
+}
+
+.messaging-unread {
+  background-color: var(--gray-50);
+}
+
+/* Minimized messaging bar (LinkedIn-style, always visible when logged in) */
+.messaging-bar {
+  position: fixed;
+  right: var(--spacing-lg);
+  bottom: 0;
+  width: 300px;
+  max-width: calc(100vw - (var(--spacing-lg) * 2));
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-md);
+  z-index: 1054;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.messaging-bar:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.messaging-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.messaging-bar-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.messaging-bar-badge {
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 0.7rem;
+  text-align: center;
+  border-radius: 9999px;
+  background: var(--danger-color, #dc3545);
+  color: white;
+  padding: 0 5px;
+}
+
+.messaging-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.messaging-bar-actions .btn {
+  padding: 0.15rem 0.35rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* When drawer is open, hide the bar */
+.messaging-drawer.open ~ .messaging-bar {
+  display: none;
+}
+
+/* Adjust drawer bottom to sit above bar when bar exists */
+.messaging-drawer {
+  bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* ============================================
    Typography
    ============================================ */
 h1, h2, h3, h4, h5, h6 {

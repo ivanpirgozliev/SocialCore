@@ -1248,3 +1248,257 @@ export async function deletePostAdmin(postId) {
 
   if (error) throw error;
 }
+
+// ============================================
+// MESSAGING
+// ============================================
+
+function normalizeDirectConversationPair(userAId, userBId) {
+  const a = String(userAId || '').trim();
+  const b = String(userBId || '').trim();
+  if (!a || !b) throw new Error('Invalid user ids');
+  if (a === b) throw new Error('Cannot create a conversation with yourself');
+  return a < b ? { low: a, high: b } : { low: b, high: a };
+}
+
+/**
+ * Get (or create) a 1:1 direct conversation between the current user and another user.
+ * Requires messaging migrations to be applied.
+ * @param {string} otherUserId
+ * @returns {Promise<{ id: string }>} Conversation
+ */
+export async function getOrCreateDirectConversation(otherUserId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Use a server-side RPC to avoid RLS/SELECT edge cases and create participants atomically.
+  const { data, error } = await supabase
+    .rpc('get_or_create_direct_conversation', { other_user_id: otherUserId });
+
+  if (error) throw error;
+  if (!data) throw new Error('Could not create conversation');
+
+  return { id: String(data) };
+}
+
+async function ensureConversationParticipant(conversationId, userId) {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .upsert(
+      [{
+        conversation_id: conversationId,
+        user_id: userId,
+      }],
+      { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
+    );
+
+  if (error) throw error;
+}
+
+/**
+ * List conversations for current user.
+ * Returns lightweight summaries for dropdown/drawer list.
+ * @param {number} limit
+ * @returns {Promise<Array>} Conversation summaries
+ */
+export async function getMyConversations(limit = 10) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: participantRows, error: participantsError } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id, last_read_at')
+    .eq('user_id', user.id);
+
+  if (participantsError) throw participantsError;
+  const conversationIds = (participantRows || []).map((row) => row.conversation_id).filter(Boolean);
+  if (!conversationIds.length) return [];
+
+  const { data: conversations, error: conversationsError } = await supabase
+    .from('conversations')
+    .select(`
+      id,
+      updated_at,
+      is_group,
+      direct_user_low,
+      direct_user_high,
+      participants:conversation_participants (
+        user_id,
+        profiles:user_id (
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      )
+    `)
+    .in('id', conversationIds)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+
+  if (conversationsError) throw conversationsError;
+
+  const { data: recentMessages, error: messagesError } = await supabase
+    .from('messages')
+    .select(`
+      id,
+      conversation_id,
+      sender_id,
+      body,
+      created_at,
+      sender:sender_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .in('conversation_id', conversationIds)
+    .order('created_at', { ascending: false })
+    .limit(Math.max(20, conversationIds.length * 2));
+
+  if (messagesError) throw messagesError;
+
+  const lastMessageByConversation = new Map();
+  (recentMessages || []).forEach((msg) => {
+    if (!lastMessageByConversation.has(msg.conversation_id)) {
+      lastMessageByConversation.set(msg.conversation_id, msg);
+    }
+  });
+
+  const lastReadByConversation = new Map();
+  (participantRows || []).forEach((row) => {
+    lastReadByConversation.set(row.conversation_id, row.last_read_at);
+  });
+
+  return (conversations || []).map((c) => {
+    const participants = (c.participants || [])
+      .map((p) => p?.profiles)
+      .filter(Boolean);
+
+    const otherParticipant = participants.find((p) => p.id !== user.id) || null;
+    const lastMessage = lastMessageByConversation.get(c.id) || null;
+    const lastReadAt = lastReadByConversation.get(c.id) || null;
+
+    const hasUnread = lastMessage && lastReadAt
+      ? new Date(lastMessage.created_at) > new Date(lastReadAt)
+      : !!lastMessage;
+
+    return {
+      id: c.id,
+      updated_at: c.updated_at,
+      other: otherParticipant,
+      last_message: lastMessage,
+      has_unread: hasUnread,
+    };
+  });
+}
+
+/**
+ * Get messages in a conversation.
+ * @param {string} conversationId
+ * @param {number} limit
+ * @returns {Promise<Array>} Messages (ascending)
+ */
+export async function getConversationMessages(conversationId, limit = 50) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select(`
+      id,
+      conversation_id,
+      sender_id,
+      body,
+      created_at,
+      sender:sender_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Send a message into a conversation.
+ * @param {string} conversationId
+ * @param {string} body
+ */
+export async function sendConversationMessage(conversationId, body) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const content = String(body || '').trim();
+  if (!content) throw new Error('Message cannot be empty');
+
+  const { data, error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        body: content,
+      }
+    ])
+    .select(`
+      id,
+      conversation_id,
+      sender_id,
+      body,
+      created_at,
+      sender:sender_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Mark a conversation as read by updating last_read_at for the current user.
+ * @param {string} conversationId
+ */
+export async function markConversationRead(conversationId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id);
+
+  if (error) throw error;
+}
+
+/**
+ * Get unread counts for the current user.
+ * Requires the DB function public.get_my_unread_counts() to exist.
+ * @returns {Promise<{ unread_conversations: number, unread_messages: number }>} Unread counts
+ */
+export async function getMyUnreadCounts() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase.rpc('get_my_unread_counts');
+  if (error) throw error;
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    unread_conversations: Number(row?.unread_conversations) || 0,
+    unread_messages: Number(row?.unread_messages) || 0,
+  };
+}
