@@ -764,7 +764,7 @@ export async function getFriendSuggestions(limit = 5) {
 
   let query = supabase
     .from('profiles')
-    .select('id, username, full_name, avatar_url')
+    .select('id, username, full_name, avatar_url, location, birthday, bio, work, education')
     .order('created_at', { ascending: false })
     .limit(limit);
 

@@ -878,6 +878,60 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
 }
 
+.suggestion-card--wide {
+  height: auto;
+  align-items: stretch;
+}
+
+.suggestion-wide {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-md);
+  width: 100%;
+  align-items: center;
+}
+
+.suggestion-main {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+}
+
+.suggestion-info {
+  min-width: 0;
+}
+
+.suggestion-sub {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.suggestion-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--gray-600);
+  margin-top: 6px;
+}
+
+.suggestion-meta span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.suggestion-bio {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  margin-top: 6px;
+}
+
+.suggestion-cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .suggestion-actions {
   display: flex;
   gap: var(--spacing-sm);
@@ -887,6 +941,20 @@ h1, h2, h3, h4, h5, h6 {
 
 .suggestion-actions .btn {
   min-width: 110px;
+}
+
+.friend-card-actions {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.friend-card-actions .btn {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  border-radius: var(--radius-md);
 }
 
 #notificationsMenu .btn {

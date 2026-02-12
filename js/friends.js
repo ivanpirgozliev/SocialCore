@@ -304,12 +304,14 @@ function createFriendCard(person, type) {
 
   if (type === 'friend') {
     actionButtons = `
-      <a class="btn btn-outline-primary btn-sm w-100 mb-2" href="${escapeHtml(profileHref)}">
-        <i class="bi bi-person me-1"></i>View Profile
-      </a>
-      <button class="btn btn-outline-danger btn-sm w-100 unfriend-btn" data-id="${escapeHtml(String(person?.id || ''))}" data-name="${escapeHtml(fullName)}">
-        <i class="bi bi-person-dash me-1"></i>Unfriend
-      </button>
+      <div class="friend-card-actions">
+        <a class="btn btn-outline-primary btn-sm w-100" href="${escapeHtml(profileHref)}">
+          <i class="bi bi-person me-1"></i>View Profile
+        </a>
+        <button class="btn btn-outline-danger btn-sm w-100 unfriend-btn" data-id="${escapeHtml(String(person?.id || ''))}" data-name="${escapeHtml(fullName)}">
+          <i class="bi bi-person-dash me-1"></i>Unfriend
+        </button>
+      </div>
     `;
   } else if (type === 'request') {
     const timeAgo = person?.requested_at ? formatRelativeTime(person.requested_at) : '';
@@ -476,24 +478,30 @@ function createSuggestionCard(profile) {
   const profileHref = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : 'profile.html';
   const mutualFriends = Number.isFinite(profile?.mutual_friends) ? profile.mutual_friends : 0;
   const mutualLabel = mutualFriends === 1 ? 'mutual friend' : 'mutual friends';
+  const metaItems = buildSuggestionMeta(profile);
+  const bioText = buildSuggestionBio(profile?.bio);
 
   col.innerHTML = `
-    <div class="suggestion-card">
-      <div class="suggestion-card-body">
-        <div class="friend-item">
+    <div class="suggestion-card suggestion-card--wide">
+      <div class="suggestion-wide">
+        <div class="suggestion-main">
           <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
             <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="friend-avatar" loading="lazy">
           </a>
-          <div class="flex-grow-1">
+          <div class="suggestion-info">
             <a href="${escapeHtml(profileHref)}" class="friend-name mb-0 text-decoration-none">${escapeHtml(fullName)}</a>
-            <small class="text-muted d-block mutual-friends">
+            <div class="suggestion-sub text-muted">
               <i class="bi bi-people me-1"></i>${mutualFriends} ${mutualLabel}
-            </small>
+            </div>
+            ${metaItems ? `<div class="suggestion-meta">${metaItems}</div>` : ''}
+            ${bioText ? `<div class="suggestion-bio">${escapeHtml(bioText)}</div>` : ''}
           </div>
         </div>
-        <button class="btn btn-primary-gradient btn-sm suggestion-action add-friend-btn" data-id="${escapeHtml(String(profile?.id || ''))}" data-state="none" data-name="${escapeHtml(fullName)}">
-          <i class="bi bi-person-plus me-1"></i>Add Friend
-        </button>
+        <div class="suggestion-cta">
+          <button class="btn btn-primary-gradient btn-sm add-friend-btn" data-id="${escapeHtml(String(profile?.id || ''))}" data-state="none" data-name="${escapeHtml(fullName)}">
+            <i class="bi bi-person-plus me-1"></i>Add Friend
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -501,6 +509,42 @@ function createSuggestionCard(profile) {
   const addBtn = col.querySelector('.add-friend-btn');
   addBtn.addEventListener('click', (e) => handleAddFriend(e.target.closest('button')));
   return col;
+}
+
+function buildSuggestionMeta(profile) {
+  const items = [];
+
+  if (profile?.location) {
+    items.push(`<span><i class="bi bi-geo-alt me-1"></i>${escapeHtml(String(profile.location))}</span>`);
+  }
+
+  const birthdayLabel = formatBirthday(profile?.birthday);
+  if (birthdayLabel) {
+    items.push(`<span><i class="bi bi-cake2 me-1"></i>${escapeHtml(birthdayLabel)}</span>`);
+  }
+
+  if (profile?.work) {
+    items.push(`<span><i class="bi bi-briefcase me-1"></i>${escapeHtml(String(profile.work))}</span>`);
+  }
+
+  if (profile?.education) {
+    items.push(`<span><i class="bi bi-mortarboard me-1"></i>${escapeHtml(String(profile.education))}</span>`);
+  }
+
+  return items.join('');
+}
+
+function formatBirthday(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function buildSuggestionBio(bio) {
+  const text = String(bio || '').trim();
+  if (!text) return '';
+  return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 }
 
 async function handleAddFriend(btn) {
