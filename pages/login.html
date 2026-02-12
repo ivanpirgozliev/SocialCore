@@ -51,7 +51,7 @@
       <p class="auth-subtitle">Login to your account to continue</p>
       
       <!-- Login Form -->
-      <form id="loginForm" novalidate>
+      <form id="loginForm" novalidate autocomplete="off">
         <!-- Email Field -->
         <div class="mb-3">
           <label for="email" class="form-label">Email Address</label>
@@ -59,8 +59,8 @@
             <span class="input-group-text">
               <i class="bi bi-envelope"></i>
             </span>
-            <input type="email" class="form-control" id="email" name="email" 
-                   placeholder="Enter your email" required>
+                 <input type="email" class="form-control" id="email" name="email" 
+                   placeholder="Enter your email" required autocomplete="off" autocapitalize="none" spellcheck="false">
           </div>
           <div class="invalid-feedback">Please enter a valid email address.</div>
         </div>

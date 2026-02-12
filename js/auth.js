@@ -75,6 +75,23 @@ function initLoginForm(form) {
     form.querySelector('#email').value = rememberedEmail;
     form.querySelector('#rememberMe').checked = true;
   }
+
+  const emailInput = form.querySelector('#email');
+  const rememberCheckbox = form.querySelector('#rememberMe');
+  if (emailInput && rememberCheckbox) {
+    rememberCheckbox.addEventListener('change', () => {
+      if (!rememberCheckbox.checked) {
+        localStorage.removeItem('socialcore_remember');
+      }
+    });
+
+    emailInput.addEventListener('input', () => {
+      if (!emailInput.value.trim()) {
+        rememberCheckbox.checked = false;
+        localStorage.removeItem('socialcore_remember');
+      }
+    });
+  }
 }
 
 function initRegisterForm(form) {

@@ -712,6 +712,59 @@ export async function getFriendsList() {
 }
 
 /**
+ * Get accepted friends for a user with total count
+ * @param {string} userId - User ID
+ * @param {number} limit - Max number of friends to return
+ * @returns {Promise<{ friends: Array, total: number }>} Friends and total count
+ */
+export async function getFriendsForUser(userId, limit = 6) {
+  const { data: countData, error: countError } = await supabase
+    .from('friend_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+
+  if (countError) throw countError;
+
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select(`
+      id,
+      requester_id,
+      addressee_id,
+      requester:requester_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      addressee:addressee_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const friends = (data || []).map((row) => {
+    const isRequester = row.requester_id === userId;
+    const friendProfile = isRequester ? row.addressee : row.requester;
+    return {
+      ...friendProfile,
+      friendship_id: row.id,
+    };
+  });
+
+  return { friends, total: countData?.count || 0 };
+}
+
+/**
  * Get relationship status with a specific user
  * @param {string} userId - Target user ID
  * @returns {Promise<{ status: string, direction?: string, requestId?: string }>} Relationship status

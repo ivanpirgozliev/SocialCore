@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -138,6 +138,9 @@ async function loadUserProfile() {
     // Load user photos (sidebar card)
     await loadProfilePhotos(requestedProfileUserId);
 
+    // Load friends card
+    await loadProfileFriends(requestedProfileUserId);
+
     // Show Admin Dashboard link if user is admin
     try {
       const isAdmin = await checkIsAdmin(authUserId);
@@ -164,6 +167,63 @@ async function loadUserProfile() {
     // Fallback: use local storage data
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
     updateProfileUIFromLocalStorage(userData);
+  }
+}
+
+async function loadProfileFriends(userId) {
+  const container = document.getElementById('profileFriendsBody');
+  const countBadge = document.getElementById('profileFriendsCount');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="text-center py-3">
+      <div class="text-muted">Loading friends...</div>
+    </div>
+  `;
+
+  try {
+    const { friends, total } = await getFriendsForUser(userId, 6);
+    if (countBadge) countBadge.textContent = total;
+
+    if (!friends.length) {
+      container.innerHTML = `
+        <div class="text-center py-4">
+          <i class="bi bi-people fs-1 text-muted mb-3 d-block"></i>
+          <p class="text-muted mb-3">No friends yet</p>
+          <a href="friends.html" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i>Find Friends
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    const cards = friends.map((friend) => {
+      const fullName = friend?.full_name || friend?.username || 'User';
+      const avatarUrl = friend?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const profileHref = friend?.id ? `profile.html?id=${encodeURIComponent(friend.id)}` : 'profile.html';
+
+      return `
+        <div class="col-4 text-center">
+          <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
+            <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle mb-2" width="64" height="64" loading="lazy">
+            <div class="small text-truncate">${escapeHtml(fullName)}</div>
+          </a>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="row g-3">${cards}</div>
+    `;
+  } catch (error) {
+    console.error('Error loading friends:', error);
+    container.innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-people fs-1 text-muted mb-3 d-block"></i>
+        <p class="text-muted mb-0">Failed to load friends</p>
+      </div>
+    `;
   }
 }
 
