@@ -4,7 +4,7 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
-import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, sendFriendRequest, cancelFriendRequest } from './database.js';
+import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 let feedOffset = 0;
@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize follow actions
   initPeopleYouMayKnowActions();
+
+  // Load notification menu
+  loadNotifications();
+
+  // Initialize notification actions
+  initNotificationActions();
 
   // Initialize post actions (like, comment, share)
   initPostActions();
@@ -208,14 +214,21 @@ async function initPeopleYouMayKnow() {
   list.innerHTML = '<div class="text-muted small">Loading suggestions...</div>';
 
   try {
-    const suggestions = await getFriendSuggestions(8);
-    if (!suggestions.length) {
+    const [requests, suggestions] = await Promise.all([
+      getFriendRequests(),
+      getFriendSuggestions(8),
+    ]);
+
+    if (!requests.length && !suggestions.length) {
       list.innerHTML = '<div class="text-muted small">No suggestions right now.</div>';
       list.classList.remove('has-overflow');
       return;
     }
 
-    list.innerHTML = suggestions.map((user) => buildSuggestionHtml(user)).join('');
+    const requestHtml = requests.map((request) => buildIncomingRequestHtml(request)).join('');
+    const suggestionHtml = suggestions.map((user) => buildSuggestionHtml(user)).join('');
+
+    list.innerHTML = `${requestHtml}${suggestionHtml}`;
     setupScrollHint(list);
   } catch (error) {
     console.error('Error loading suggestions:', error);
@@ -260,32 +273,36 @@ function initPeopleYouMayKnowActions() {
   if (!list) return;
 
   list.addEventListener('click', async (e) => {
-    const button = e.target.closest('[data-action="add-friend"]');
+    const button = e.target.closest('[data-action]');
     if (!button) return;
 
+    const action = button.dataset.action;
     const userId = button.dataset.userId;
-    if (!userId) return;
-    const state = button.dataset.state || 'none';
+    const requestId = button.dataset.requestId;
+    if (!userId && !requestId) return;
 
     const originalHtml = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Working';
 
     try {
-      if (state === 'pending') {
-        await cancelFriendRequest(userId);
-        button.dataset.state = 'none';
-        button.classList.remove('btn-outline-secondary');
-        button.classList.add('btn-primary-gradient');
-        button.innerHTML = '<i class="bi bi-person-plus me-1"></i>Add Friend';
-        showToast('Friend request canceled.', 'info');
-      } else {
-        await sendFriendRequest(userId);
-        button.dataset.state = 'pending';
-        button.classList.remove('btn-primary-gradient');
-        button.classList.add('btn-outline-secondary');
-        button.innerHTML = '<i class="bi bi-x-circle me-1"></i>Cancel Request';
-        showToast('Friend request sent.', 'success');
+      if (action === 'accept-request' && requestId) {
+        optimisticRemoveRequest(requestId);
+        await acceptFriendRequest(requestId);
+        showToast('Friend request accepted.', 'success');
+      } else if (action === 'reject-request' && requestId) {
+        optimisticRemoveRequest(requestId);
+        await declineFriendRequest(requestId);
+        showToast('Friend request rejected.', 'info');
+      } else if (action === 'add-friend' && userId) {
+        const state = button.dataset.state || 'none';
+        if (state === 'pending') {
+          await cancelFriendRequest(userId);
+          showToast('Friend request canceled.', 'info');
+        } else {
+          await sendFriendRequest(userId);
+          showToast('Friend request sent.', 'success');
+        }
       }
     } catch (error) {
       console.error('Error updating friend request:', error);
@@ -296,12 +313,12 @@ function initPeopleYouMayKnowActions() {
     }
 
     button.disabled = false;
+    await Promise.all([initPeopleYouMayKnow(), loadNotifications()]);
   });
 }
 
 function buildSuggestionHtml(user) {
   const fullName = user?.full_name || user?.username || 'User';
-  const username = user?.username || 'user';
   const profileHref = user?.id ? `profile.html?id=${encodeURIComponent(user.id)}` : 'profile.html';
   const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
   const mutualFriends = Number.isFinite(user?.mutual_friends) ? user.mutual_friends : 0;
@@ -325,6 +342,156 @@ function buildSuggestionHtml(user) {
       </div>
     </div>
   `;
+}
+
+function buildIncomingRequestHtml(request) {
+  const fullName = request?.full_name || request?.username || 'User';
+  const profileHref = request?.id ? `profile.html?id=${encodeURIComponent(request.id)}` : 'profile.html';
+  const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+
+  return `
+    <div class="suggestion-card" data-user-id="${escapeHtml(String(request?.id || ''))}" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
+      <div class="suggestion-card-body">
+        <div class="friend-item">
+          <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
+            <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="friend-avatar" loading="lazy">
+          </a>
+          <div class="flex-grow-1">
+            <a href="${escapeHtml(profileHref)}" class="friend-name mb-0 text-decoration-none">${escapeHtml(fullName)}</a>
+            <small class="text-muted d-block">Sent you a friend request</small>
+          </div>
+        </div>
+        <div class="suggestion-actions">
+          <button class="btn btn-primary-gradient btn-sm" type="button" data-action="accept-request" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
+            <i class="bi bi-check-lg me-1"></i>Accept
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-action="reject-request" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
+            <i class="bi bi-x-lg me-1"></i>Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadNotifications() {
+  const menu = document.getElementById('notificationsMenu');
+  const badge = document.getElementById('notificationsBadge');
+  if (!menu) return;
+
+  menu.innerHTML = `
+    <li class="dropdown-header">Notifications</li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item py-2 text-center text-muted">Loading...</a></li>
+  `;
+
+  try {
+    const requests = await getFriendRequests();
+    if (badge) {
+      badge.textContent = requests.length;
+      badge.classList.toggle('d-none', requests.length === 0);
+    }
+    if (!requests.length) {
+      menu.innerHTML = `
+        <li class="dropdown-header">Notifications</li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item py-2 text-center text-muted">No new notifications</a></li>
+      `;
+      return;
+    }
+
+    const itemsHtml = requests.map((request) => {
+      const fullName = request?.full_name || request?.username || 'User';
+      const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      return `
+        <li class="px-3 py-2" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
+          <div class="d-flex align-items-start gap-2">
+            <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="32" height="32" loading="lazy">
+            <div class="flex-grow-1">
+              <div class="small"><strong>${escapeHtml(fullName)}</strong> sent you a friend request</div>
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-primary-gradient btn-sm" type="button" data-action="accept-request" data-request-id="${escapeHtml(String(request?.request_id || ''))}">Accept</button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-action="reject-request" data-request-id="${escapeHtml(String(request?.request_id || ''))}">Reject</button>
+              </div>
+            </div>
+          </div>
+        </li>
+      `;
+    }).join('');
+
+    menu.innerHTML = `
+      <li class="dropdown-header">Notifications</li>
+      <li><hr class="dropdown-divider"></li>
+      ${itemsHtml}
+    `;
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+    if (badge) {
+      badge.textContent = '0';
+      badge.classList.add('d-none');
+    }
+    menu.innerHTML = `
+      <li class="dropdown-header">Notifications</li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item py-2 text-center text-muted">Failed to load notifications</a></li>
+    `;
+  }
+}
+
+function initNotificationActions() {
+  const menu = document.getElementById('notificationsMenu');
+  if (!menu) return;
+
+  menu.addEventListener('click', async (e) => {
+    const button = e.target.closest('[data-action]');
+    if (!button) return;
+
+    const action = button.dataset.action;
+    const requestId = button.dataset.requestId;
+    if (!requestId) return;
+
+    button.disabled = true;
+    try {
+      if (action === 'accept-request') {
+        optimisticRemoveRequest(requestId);
+        await acceptFriendRequest(requestId);
+        showToast('Friend request accepted.', 'success');
+      } else if (action === 'reject-request') {
+        optimisticRemoveRequest(requestId);
+        await declineFriendRequest(requestId);
+        showToast('Friend request rejected.', 'info');
+      }
+    } catch (error) {
+      console.error('Error updating request:', error);
+      button.disabled = false;
+      showToast('Failed to update request. Please try again.', 'error');
+      await Promise.all([loadNotifications(), initPeopleYouMayKnow()]);
+      return;
+    }
+
+    await Promise.all([loadNotifications(), initPeopleYouMayKnow()]);
+  });
+}
+
+function optimisticRemoveRequest(requestId) {
+  if (!requestId) return;
+
+  const menuItem = document.querySelector(`#notificationsMenu [data-request-id="${CSS.escape(requestId)}"]`);
+  if (menuItem) menuItem.remove();
+
+  const requestCard = document.querySelector(`#peopleYouMayKnowList [data-request-id="${CSS.escape(requestId)}"]`);
+  if (requestCard) requestCard.remove();
+
+  const badge = document.getElementById('notificationsBadge');
+  if (badge && !badge.classList.contains('d-none')) {
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = Math.max(0, current - 1);
+    badge.textContent = next;
+    badge.classList.toggle('d-none', next === 0);
+  }
+
+  const list = document.getElementById('peopleYouMayKnowList');
+  if (list) setupScrollHint(list);
 }
 
 /**

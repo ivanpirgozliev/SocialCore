@@ -878,6 +878,22 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
 }
 
+.suggestion-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  width: 100%;
+  justify-content: center;
+}
+
+.suggestion-actions .btn {
+  min-width: 110px;
+}
+
+#notificationsMenu .btn {
+  min-width: 96px;
+  justify-content: center;
+}
+
 #peopleYouMayKnowList,
 #suggestions-list {
   max-height: calc((var(--suggestion-card-height) * 3) + (var(--spacing-sm) * 2));

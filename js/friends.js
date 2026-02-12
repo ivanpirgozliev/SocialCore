@@ -424,20 +424,20 @@ async function handleAcceptRequest(btn) {
   const name = btn.getAttribute('data-name');
   const requestId = btn.getAttribute('data-request-id');
   if (!requestId) return;
+  const card = btn.closest('.col-md-6');
+  if (card) card.remove();
+  updateRequestBadge(-1);
 
   btn.disabled = true;
-
   try {
     await acceptFriendRequest(requestId);
-    const card = btn.closest('.col-md-6');
-    card?.remove();
     showToast(`You are now friends with ${name}!`, 'success');
-    updateRequestBadge(-1);
     loadFriends();
   } catch (error) {
     console.error('Error accepting request:', error);
     btn.disabled = false;
     showToast('Failed to accept request. Please try again.', 'error');
+    loadFriendRequests();
   }
 }
 
@@ -448,19 +448,19 @@ async function handleDeclineRequest(btn) {
   const name = btn.getAttribute('data-name');
   const requestId = btn.getAttribute('data-request-id');
   if (!requestId) return;
+  const card = btn.closest('.col-md-6');
+  if (card) card.remove();
+  updateRequestBadge(-1);
 
   btn.disabled = true;
-
   try {
     await declineFriendRequest(requestId);
-    const card = btn.closest('.col-md-6');
-    card?.remove();
     showToast(`Friend request from ${name} declined`, 'info');
-    updateRequestBadge(-1);
   } catch (error) {
     console.error('Error declining request:', error);
     btn.disabled = false;
     showToast('Failed to decline request. Please try again.', 'error');
+    loadFriendRequests();
   }
 }
 
