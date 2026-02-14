@@ -4,13 +4,17 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
-import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
+import { getFeedPosts, getFollowingFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
+const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
 let feedOffset = 0;
 let isLoadingFeed = false;
+let currentFeedTab = 'for-you';
 
 document.addEventListener('DOMContentLoaded', () => {
+  initFeedTabs();
+
   // Hydrate current user (avatar/name/username) and update Feed UI
   initCurrentUserFeedUI();
 
@@ -33,6 +37,80 @@ document.addEventListener('DOMContentLoaded', () => {
   initSearch();
 });
 
+function initFeedTabs() {
+  const tabButtons = document.querySelectorAll('[data-feed-tab]');
+  if (!tabButtons.length) return;
+
+  currentFeedTab = resolveInitialFeedTab(tabButtons);
+  applyFeedTabSelection(tabButtons, currentFeedTab);
+
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const selectedTab = button.dataset.feedTab;
+      if (!selectedTab || selectedTab === currentFeedTab) return;
+
+      currentFeedTab = selectedTab;
+
+      applyFeedTabSelection(tabButtons, selectedTab);
+      persistFeedTab(selectedTab);
+
+      loadInitialFeedPosts();
+    });
+  });
+}
+
+function resolveInitialFeedTab(tabButtons) {
+  const allowedTabs = new Set(Array.from(tabButtons).map((button) => button.dataset.feedTab).filter(Boolean));
+
+  const urlTab = new URLSearchParams(window.location.search).get('tab');
+  if (urlTab && allowedTabs.has(urlTab)) {
+    return urlTab;
+  }
+
+  try {
+    const storedTab = localStorage.getItem(FEED_TAB_STORAGE_KEY);
+    if (storedTab && allowedTabs.has(storedTab)) {
+      return storedTab;
+    }
+  } catch {
+    // ignore storage access failures
+  }
+
+  return 'for-you';
+}
+
+function applyFeedTabSelection(tabButtons, selectedTab) {
+  tabButtons.forEach((tabBtn) => {
+    const active = tabBtn.dataset.feedTab === selectedTab;
+    tabBtn.classList.toggle('active', active);
+    tabBtn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+
+function persistFeedTab(selectedTab) {
+  try {
+    localStorage.setItem(FEED_TAB_STORAGE_KEY, selectedTab);
+  } catch {
+    // ignore storage access failures
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', selectedTab);
+    window.history.replaceState({}, '', url.toString());
+  } catch {
+    // ignore history/url failures
+  }
+}
+
+async function fetchFeedPosts(limit, offset) {
+  if (currentFeedTab === 'following') {
+    return getFollowingFeedPosts(limit, offset);
+  }
+
+  return getFeedPosts(limit, offset);
+}
+
 async function loadInitialFeedPosts() {
   const postsFeed = document.getElementById('postsFeed');
   if (!postsFeed) return;
@@ -41,11 +119,18 @@ async function loadInitialFeedPosts() {
   feedOffset = 0;
 
   try {
-    const posts = await getFeedPosts(FEED_PAGE_SIZE, feedOffset);
+    const posts = await fetchFeedPosts(FEED_PAGE_SIZE, feedOffset);
     postsFeed.innerHTML = '';
 
     if (!posts.length) {
-      postsFeed.innerHTML = buildEmptyStateHtml();
+      const emptyState = currentFeedTab === 'following'
+        ? buildEmptyStateHtml({
+          title: 'No following posts yet',
+          description: 'Follow people or add friends to see their posts here.',
+        })
+        : buildEmptyStateHtml();
+
+      postsFeed.innerHTML = emptyState;
       toggleLoadMore(false);
       return;
     }
@@ -70,7 +155,7 @@ async function loadMoreFeedPosts() {
   isLoadingFeed = true;
 
   try {
-    const posts = await getFeedPosts(FEED_PAGE_SIZE, feedOffset);
+    const posts = await fetchFeedPosts(FEED_PAGE_SIZE, feedOffset);
     if (!posts.length) {
       toggleLoadMore(false);
       return;
@@ -156,13 +241,13 @@ function createFeedPostHtml(post) {
   `;
 }
 
-function buildEmptyStateHtml(title = 'No posts yet') {
+function buildEmptyStateHtml({ title = 'No posts yet', description = 'Start following people or create your first post!' } = {}) {
   return `
     <div class="card text-center py-5">
       <div class="card-body">
         <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
         <h5 class="text-muted">${escapeHtml(title)}</h5>
-        <p class="text-gray-500 mb-3">Start following people or create your first post!</p>
+        <p class="text-gray-500 mb-3">${escapeHtml(description)}</p>
         <a href="create-post.html" class="btn btn-primary-gradient">
           <i class="bi bi-plus-circle me-2"></i>Create Post
         </a>

@@ -70,6 +70,56 @@ export async function getFeedPosts(limit = 10, offset = 0) {
 }
 
 /**
+ * Get feed posts only from users the current user follows or is friends with
+ * @param {number} limit - Number of posts to fetch
+ * @param {number} offset - Offset for pagination
+ * @returns {Promise<Array>} Array of posts
+ */
+export async function getFollowingFeedPosts(limit = 10, offset = 0) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: followingRows, error: followingError } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', user.id);
+
+  if (followingError) throw followingError;
+
+  const friendIds = await getAcceptedFriendIdsForUser(user.id);
+  const authorIds = new Set((followingRows || []).map((row) => row.following_id).filter(Boolean));
+
+  friendIds.forEach((friendId) => {
+    authorIds.add(friendId);
+  });
+
+  authorIds.delete(user.id);
+
+  const ids = Array.from(authorIds);
+  if (!ids.length) return [];
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      *,
+      profiles:user_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      comments:comments(count),
+      likes:likes(count)
+    `)
+    .in('user_id', ids)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return hydratePostLikeState(data || []);
+}
+
+/**
  * Get posts by user ID
  * @param {string} userId - User ID
  * @param {number} limit - Number of posts to fetch
