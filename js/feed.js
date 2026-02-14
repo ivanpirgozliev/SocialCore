@@ -298,12 +298,13 @@ function toggleFollowingFiltersVisibility() {
 
 function buildFollowingAccountChip(account, { active = false } = {}) {
   const fullName = account?.full_name || account?.username || 'User';
+  const label = fullName;
   const avatarUrl = account?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
 
   return `
-    <button type="button" class="following-filter-chip ${active ? 'active' : ''}" data-following-id="${escapeHtml(String(account?.id || ''))}" title="${escapeHtml(fullName)}">
+    <button type="button" class="following-filter-chip ${active ? 'active' : ''}" data-following-id="${escapeHtml(String(account?.id || ''))}" title="${escapeHtml(label)}">
       <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="following-filter-avatar" loading="lazy">
-      <span class="following-filter-name">${escapeHtml(fullName)}</span>
+      <span class="following-filter-name">${escapeHtml(label)}</span>
     </button>
   `;
 }
@@ -328,7 +329,7 @@ function renderFollowingFilters() {
   }
 
   const allChip = `
-    <button type="button" class="following-filter-chip ${selectedFollowingAuthorId ? '' : 'active'}" data-following-id="all">
+    <button type="button" class="following-filter-chip following-filter-chip--all ${selectedFollowingAuthorId ? '' : 'active'}" data-following-id="all" title="All">
       <span class="following-filter-name">All</span>
     </button>
   `;
