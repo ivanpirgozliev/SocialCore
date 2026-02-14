@@ -17,6 +17,14 @@ let profileView = {
 };
 
 let profileRealtimeCleanup = null;
+let photoViewerState = {
+  modalEl: null,
+  images: [],
+  currentIndex: 0,
+  keyHandler: null,
+  touchStartX: null,
+  touchStartY: null,
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserProfile();
@@ -26,6 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize tab navigation
   initTabNavigation();
+
+  // Initialize photo viewer modal interactions
+  initPhotoViewer();
 
   // Subscribe for realtime profile updates
   initProfileRealtime();
@@ -556,6 +567,179 @@ function buildUserPhotosPrefix(userId) {
   return `${userId}/${USER_PHOTOS_FOLDER}`;
 }
 
+function ensurePhotoViewerModal() {
+  if (photoViewerState.modalEl) return photoViewerState.modalEl;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'profilePhotoViewerModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-dark border-0">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title text-white">Photo Viewer</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <div class="position-relative d-flex justify-content-center align-items-center">
+            <button type="button" class="btn btn-light position-absolute start-0 top-50 translate-middle-y ms-2" data-action="prev-photo" aria-label="Previous photo">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <img src="" alt="Profile photo" class="img-fluid rounded" id="profilePhotoViewerImage" loading="lazy" style="max-height: 75vh; width: auto;">
+            <button type="button" class="btn btn-light position-absolute end-0 top-50 translate-middle-y me-2" data-action="next-photo" aria-label="Next photo">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+          <div class="text-center text-white-50 small mt-3" id="profilePhotoViewerCounter"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  photoViewerState.modalEl = modalEl;
+
+  modalEl.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-action]');
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.action;
+    if (action === 'prev-photo') {
+      showPreviousPhoto();
+    }
+    if (action === 'next-photo') {
+      showNextPhoto();
+    }
+  });
+
+  modalEl.addEventListener('shown.bs.modal', () => {
+    photoViewerState.keyHandler = (event) => {
+      if (event.key === 'ArrowLeft') showPreviousPhoto();
+      if (event.key === 'ArrowRight') showNextPhoto();
+    };
+    document.addEventListener('keydown', photoViewerState.keyHandler);
+  });
+
+  modalEl.addEventListener('touchstart', (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    photoViewerState.touchStartX = touch.clientX;
+    photoViewerState.touchStartY = touch.clientY;
+  }, { passive: true });
+
+  modalEl.addEventListener('touchend', (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    if (photoViewerState.touchStartX == null || photoViewerState.touchStartY == null) return;
+
+    const diffX = touch.clientX - photoViewerState.touchStartX;
+    const diffY = touch.clientY - photoViewerState.touchStartY;
+
+    photoViewerState.touchStartX = null;
+    photoViewerState.touchStartY = null;
+
+    const minSwipeDistance = 50;
+    if (Math.abs(diffX) < minSwipeDistance) return;
+    if (Math.abs(diffY) > Math.abs(diffX)) return;
+
+    if (diffX < 0) {
+      showNextPhoto();
+    } else {
+      showPreviousPhoto();
+    }
+  }, { passive: true });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (photoViewerState.keyHandler) {
+      document.removeEventListener('keydown', photoViewerState.keyHandler);
+      photoViewerState.keyHandler = null;
+    }
+    photoViewerState.touchStartX = null;
+    photoViewerState.touchStartY = null;
+  });
+
+  return modalEl;
+}
+
+function updatePhotoViewerImage() {
+  const modalEl = ensurePhotoViewerModal();
+  const imageEl = modalEl.querySelector('#profilePhotoViewerImage');
+  const counterEl = modalEl.querySelector('#profilePhotoViewerCounter');
+  const prevBtn = modalEl.querySelector('[data-action="prev-photo"]');
+  const nextBtn = modalEl.querySelector('[data-action="next-photo"]');
+
+  if (!imageEl) return;
+  if (!photoViewerState.images.length) return;
+
+  const total = photoViewerState.images.length;
+  const normalizedIndex = ((photoViewerState.currentIndex % total) + total) % total;
+  photoViewerState.currentIndex = normalizedIndex;
+
+  imageEl.src = photoViewerState.images[normalizedIndex];
+  if (counterEl) counterEl.textContent = `${normalizedIndex + 1} / ${total}`;
+
+  const shouldShowArrows = total > 1;
+  if (prevBtn) prevBtn.classList.toggle('d-none', !shouldShowArrows);
+  if (nextBtn) nextBtn.classList.toggle('d-none', !shouldShowArrows);
+}
+
+function showPreviousPhoto() {
+  if (!photoViewerState.images.length) return;
+  photoViewerState.currentIndex -= 1;
+  updatePhotoViewerImage();
+}
+
+function showNextPhoto() {
+  if (!photoViewerState.images.length) return;
+  photoViewerState.currentIndex += 1;
+  updatePhotoViewerImage();
+}
+
+function openPhotoViewer(images, startIndex = 0) {
+  const validImages = (images || []).filter((url) => typeof url === 'string' && url.trim());
+  if (!validImages.length) return;
+
+  photoViewerState.images = validImages;
+  photoViewerState.currentIndex = Math.max(0, startIndex);
+
+  const modalEl = ensurePhotoViewerModal();
+  updatePhotoViewerImage();
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+}
+
+function initPhotoViewer() {
+  if (document.body.dataset.profilePhotoViewerBound === 'true') return;
+  document.body.dataset.profilePhotoViewerBound = 'true';
+
+  document.body.addEventListener('click', (e) => {
+    const trigger = e.target.closest('[data-photo-viewer-url]');
+    if (!trigger) return;
+
+    e.preventDefault();
+
+    const imageUrl = trigger.getAttribute('data-photo-viewer-url');
+    if (!imageUrl) return;
+
+    const galleryName = trigger.getAttribute('data-photo-gallery') || 'profile-media';
+    const galleryTriggers = Array.from(document.querySelectorAll(`[data-photo-viewer-url][data-photo-gallery="${CSS.escape(galleryName)}"]`));
+    const galleryImages = galleryTriggers
+      .map((item) => item.getAttribute('data-photo-viewer-url'))
+      .filter((url) => typeof url === 'string' && url.trim());
+
+    if (!galleryImages.length) {
+      openPhotoViewer([imageUrl], 0);
+      return;
+    }
+
+    const clickedIndex = galleryImages.findIndex((url) => url === imageUrl);
+    openPhotoViewer(galleryImages, clickedIndex >= 0 ? clickedIndex : 0);
+  });
+}
+
 async function loadProfilePhotos(userId) {
   const grid = document.getElementById('profilePhotosGrid');
   const emptyState = document.getElementById('profilePhotosEmptyState');
@@ -591,12 +775,13 @@ async function loadProfilePhotos(userId) {
       const fullPath = `${prefix}/${item.name}`;
       const { data: urlData } = supabase.storage.from(PHOTOS_BUCKET_ID).getPublicUrl(fullPath);
       const publicUrl = urlData?.publicUrl || '';
+      const safeUrl = escapeHtml(publicUrl);
 
       return `
         <div class="col-6">
-          <a href="${publicUrl}" target="_blank" rel="noreferrer" class="d-block">
-            <img src="${publicUrl}" alt="Photo" class="img-fluid rounded" loading="lazy">
-          </a>
+          <button type="button" class="btn p-0 border-0 bg-transparent d-block w-100" data-photo-viewer-url="${safeUrl}" data-photo-gallery="profile-media">
+            <img src="${safeUrl}" alt="Photo" class="img-fluid rounded" loading="lazy">
+          </button>
         </div>
       `;
     })
@@ -893,7 +1078,7 @@ function createPostCard(post) {
       </div>
       <div class="post-content">
         <p>${escapeHtml(post.content)}</p>
-        ${post.image_url ? `<img src="${post.image_url}" alt="Post image" class="post-image">` : ''}
+        ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="profile-media">` : ''}
       </div>
       <div class="post-actions">
         <button class="post-action-btn ${likeClass}" data-action="like">
@@ -958,7 +1143,7 @@ function initProfileActions() {
   
   // Edit cover photo button
   const editCoverBtn = document.querySelector('.profile-cover .btn');
-  if (editCoverBtn) {
+  if (editCoverBtn && profileView.isOwnProfile) {
     editCoverBtn.addEventListener('click', () => {
       uploadCoverPhoto();
     });
@@ -966,12 +1151,19 @@ function initProfileActions() {
   
   // Avatar click to upload
   const avatarImg = document.querySelector('.profile-avatar-large');
-  if (avatarImg) {
+  if (avatarImg && profileView.isOwnProfile) {
     avatarImg.style.cursor = 'pointer';
     avatarImg.title = 'Click to change profile picture';
+    avatarImg.removeAttribute('data-photo-viewer-url');
+    avatarImg.removeAttribute('data-photo-gallery');
     avatarImg.addEventListener('click', () => {
       uploadAvatarPhoto();
     });
+  } else if (avatarImg) {
+    avatarImg.style.cursor = 'zoom-in';
+    avatarImg.title = 'View profile picture';
+    avatarImg.setAttribute('data-photo-viewer-url', avatarImg.src || '');
+    avatarImg.setAttribute('data-photo-gallery', 'profile-media');
   }
 }
 
@@ -1585,6 +1777,8 @@ function initTabNavigation() {
  * Upload avatar photo
  */
 async function uploadAvatarPhoto() {
+  if (!profileView.isOwnProfile) return;
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
@@ -1624,6 +1818,8 @@ async function uploadAvatarPhoto() {
  * Upload cover photo
  */
 async function uploadCoverPhoto() {
+  if (!profileView.isOwnProfile) return;
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
