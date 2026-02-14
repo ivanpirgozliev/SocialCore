@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAppAfterAuth() {
+  initNavbarBrandLink();
+
   // Initialize Bootstrap tooltips
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
   tooltipTriggerList.forEach((tooltipTriggerEl) => {
@@ -257,6 +259,45 @@ export function initUserSearch() {
 function isPublicPage() {
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
   return new Set(['index.html', 'login.html', 'register.html']).has(currentPage);
+}
+
+function resolveRelativeAppLink(type) {
+  const inPages = window.location.pathname.includes('/pages/');
+
+  if (type === 'home') {
+    return inPages ? '../index.html' : 'index.html';
+  }
+
+  if (type === 'feed') {
+    return inPages ? 'feed.html' : 'pages/feed.html';
+  }
+
+  return '#';
+}
+
+async function initNavbarBrandLink() {
+  const brandLink = document.querySelector('.navbar-brand');
+  if (!brandLink) return;
+
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  if (currentPage === 'login.html' || currentPage === 'register.html') {
+    brandLink.href = resolveRelativeAppLink('home');
+    return;
+  }
+
+  let isLoggedIn = Boolean(getStoredUser()?.id);
+
+  try {
+    const { supabase } = await import('./supabase.js');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      isLoggedIn = true;
+    }
+  } catch {
+    // ignore and fallback to stored user
+  }
+
+  brandLink.href = isLoggedIn ? resolveRelativeAppLink('feed') : resolveRelativeAppLink('home');
 }
 
 async function enforceAuthenticatedSession() {
