@@ -1,0 +1,52 @@
+﻿/* ============================================
+   Profile Styles
+   ============================================ */
+.profile-cover {
+  height: 200px;
+  background: #B8dde7;
+  position: relative;
+}
+
+.profile-cover-edit-btn {
+  opacity: 0.6;
+}
+
+.profile-avatar-large {
+  width: 150px;
+  height: 150px;
+  border-radius: var(--radius-full);
+  border: 5px solid white;
+  object-fit: cover;
+  position: absolute;
+  bottom: -75px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-lg);
+}
+
+.profile-info {
+  padding-top: 90px;
+  text-align: center;
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-2xl);
+  margin-top: var(--spacing-lg);
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+}

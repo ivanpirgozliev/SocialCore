@@ -1,0 +1,63 @@
+﻿/* ============================================
+   Auth Pages
+   ============================================ */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  padding: var(--spacing-xl);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--spacing-2xl);
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.auth-logo img {
+  height: 80px;
+  width: auto;
+}
+
+.auth-title {
+  text-align: center;
+  font-size: 1.75rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: var(--gray-500);
+  margin-bottom: var(--spacing-xl);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: var(--spacing-lg) 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--gray-200);
+}
+
+.divider span {
+  padding: 0 var(--spacing-md);
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+

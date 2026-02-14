@@ -1,0 +1,70 @@
+﻿/* ============================================
+   Footer Styles
+   ============================================ */
+.footer {
+  background-color: var(--gray-900);
+  color: var(--gray-400);
+  padding: var(--spacing-2xl) 0 var(--spacing-lg);
+}
+
+.footer-brand {
+  color: white;
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.footer-links a {
+  color: var(--gray-400);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-bottom {
+  border-top: 1px solid var(--gray-800);
+  padding-top: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+  text-align: center;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.bg-gradient {
+  background: var(--primary-gradient);
+}
+
+.text-primary-blue {
+  color: var(--primary-blue);
+}
+
+.text-gray-500 {
+  color: var(--gray-500);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+
+.shadow-hover {
+  transition: var(--transition-normal);
+}
+
+.shadow-hover:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Tab Content (Friends page) */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+

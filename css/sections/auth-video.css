@@ -1,0 +1,24 @@
+﻿/* ============================================
+   Auth Pages with Video Background
+   ============================================ */
+.page-with-video {
+  position: relative;
+  z-index: 1;
+}
+
+.page-with-video .auth-container {
+  background: transparent;
+}
+
+.page-with-video .auth-card {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+.page-with-video .navbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+

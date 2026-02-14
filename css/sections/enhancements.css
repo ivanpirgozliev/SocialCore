@@ -1,0 +1,155 @@
+﻿/* ============================================
+   Enhanced Form Styles
+   ============================================ */
+.form-control {
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  transition: var(--transition-fast);
+  background-color: #FAFBFC;
+}
+
+.form-control:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background-color: white;
+}
+
+.form-control:hover:not(:focus) {
+  border-color: var(--gray-300);
+}
+
+.form-select {
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  transition: var(--transition-fast);
+  background-color: #FAFBFC;
+}
+
+.form-select:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background-color: white;
+}
+
+.input-group-text {
+  border: 2px solid var(--gray-200);
+  background-color: var(--gray-100);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.input-group .form-control {
+  border-left: none;
+}
+
+.input-group .form-control:focus {
+  border-left: none;
+}
+
+.input-group:focus-within .input-group-text {
+  border-color: var(--primary-blue);
+  background-color: var(--gray-50);
+}
+
+/* ============================================
+   Nav Pills (Settings Tabs) Enhancement
+   ============================================ */
+.nav-pills .nav-link {
+  color: var(--gray-600);
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: var(--transition-fast);
+}
+
+.nav-pills .nav-link:hover {
+  color: var(--primary-blue);
+  background-color: var(--gray-100);
+  border-left-color: var(--gray-300);
+}
+
+.nav-pills .nav-link.active {
+  color: var(--primary-blue);
+  background-color: rgba(37, 99, 235, 0.1);
+  border-left-color: var(--primary-blue);
+  font-weight: 600;
+}
+
+/* ============================================
+   Form Switch Enhancement
+   ============================================ */
+.form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+  border: 2px solid var(--gray-300);
+  background-color: var(--gray-200);
+  cursor: pointer;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-blue);
+  border-color: var(--primary-blue);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* ============================================
+   Section Headers Enhancement
+   ============================================ */
+.card-header h5 {
+  color: var(--gray-800);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.card-header h5 i {
+  color: var(--primary-blue);
+}
+
+/* ============================================
+   Label Enhancement
+   ============================================ */
+.form-label {
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+}
+
+.form-text {
+  color: var(--gray-500);
+  font-size: 0.8125rem;
+}
+
+/* ============================================
+   Alert Enhancement
+   ============================================ */
+.alert {
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+
+.alert-danger {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border-left: 4px solid var(--danger);
+}
+
+.alert-success {
+  background-color: #D1FAE5;
+  color: #065F46;
+  border-left: 4px solid var(--success);
+}
+
+/* ============================================
+   Badge Enhancement
+   ============================================ */
+.badge {
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+}
+

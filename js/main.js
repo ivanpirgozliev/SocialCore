@@ -65,17 +65,20 @@ function initAppAfterAuth() {
     initNavbarUserAvatar();
   });
 
-  // Messaging (LinkedIn-style drawer + navbar dropdown)
-  initMessagingNav();
-  initMessagingRealtime();
-  initMessagingBar();
+  if (!isPublicPage()) {
+    initMessagingNav();
+    initMessagingRealtime();
+    initMessagingBar();
+  }
+}
+
+function isPublicPage() {
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  return new Set(['index.html', 'login.html', 'register.html']).has(currentPage);
 }
 
 async function enforceAuthenticatedSession() {
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-  const publicPages = new Set(['index.html', 'login.html', 'register.html']);
-
-  if (publicPages.has(currentPage)) return true;
+  if (isPublicPage()) return true;
 
   try {
     const { supabase } = await import('./supabase.js');
