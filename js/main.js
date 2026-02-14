@@ -66,12 +66,192 @@ function initAppAfterAuth() {
   });
 
   if (!isPublicPage()) {
+    initUserSearch();
     initNotificationsNav();
     initNotificationsRealtime();
     initMessagingNav();
     initMessagingRealtime();
     initMessagingBar();
   }
+}
+
+export function initUserSearch() {
+  const searchForm = document.querySelector('form[role="search"]');
+  const searchInput = searchForm?.querySelector('input[type="search"], input');
+  if (!searchForm || !searchInput) return;
+  if (searchForm.dataset.userSearchBound === 'true') return;
+  searchForm.dataset.userSearchBound = 'true';
+
+  searchForm.classList.add('position-relative');
+
+  let resultsMenu = searchForm.querySelector('.user-search-results');
+  if (!resultsMenu) {
+    resultsMenu = document.createElement('div');
+    resultsMenu.className = 'user-search-results d-none';
+    resultsMenu.setAttribute('role', 'listbox');
+    searchForm.appendChild(resultsMenu);
+  }
+
+  let activeSearchId = 0;
+  let activeResultIndex = -1;
+
+  const getResultItems = () => Array.from(resultsMenu.querySelectorAll('[data-user-search-item="true"]'));
+
+  const resetActiveResult = () => {
+    activeResultIndex = -1;
+    getResultItems().forEach((item) => item.classList.remove('active'));
+  };
+
+  const setActiveResult = (nextIndex) => {
+    const items = getResultItems();
+    if (!items.length) {
+      activeResultIndex = -1;
+      return;
+    }
+
+    const normalizedIndex = ((nextIndex % items.length) + items.length) % items.length;
+    activeResultIndex = normalizedIndex;
+
+    items.forEach((item, index) => {
+      item.classList.toggle('active', index === normalizedIndex);
+    });
+
+    items[normalizedIndex].scrollIntoView({ block: 'nearest' });
+  };
+
+  const closeResults = () => {
+    resultsMenu.classList.add('d-none');
+    resetActiveResult();
+  };
+
+  const showResults = () => {
+    resultsMenu.classList.remove('d-none');
+  };
+
+  const renderLoading = () => {
+    resultsMenu.innerHTML = '<div class="user-search-result-muted">Searching...</div>';
+    resetActiveResult();
+    showResults();
+  };
+
+  const renderEmpty = () => {
+    resultsMenu.innerHTML = '<div class="user-search-result-muted">No users found.</div>';
+    resetActiveResult();
+    showResults();
+  };
+
+  const renderError = () => {
+    resultsMenu.innerHTML = '<div class="user-search-result-muted">Failed to search users.</div>';
+    resetActiveResult();
+    showResults();
+  };
+
+  const renderUsers = (users) => {
+    const html = users.map((user) => {
+      const fullName = user?.full_name || user?.username || 'User';
+      const username = user?.username || 'user';
+      const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const profileHref = `profile.html?id=${encodeURIComponent(String(user?.id || ''))}`;
+
+      return `
+        <a href="${escapeHtml(profileHref)}" class="user-search-result-item" role="option" data-user-search-item="true">
+          <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="user-search-result-avatar" width="36" height="36" loading="lazy">
+          <div class="user-search-result-meta">
+            <span class="user-search-result-name">${escapeHtml(fullName)}</span>
+            <span class="user-search-result-username">@${escapeHtml(username)}</span>
+          </div>
+        </a>
+      `;
+    }).join('');
+
+    resultsMenu.innerHTML = html;
+    resetActiveResult();
+    showResults();
+  };
+
+  const executeSearch = debounce(async (rawQuery) => {
+    const query = String(rawQuery || '').trim();
+    if (query.length < 2) {
+      closeResults();
+      resultsMenu.innerHTML = '';
+      return;
+    }
+
+    const searchId = ++activeSearchId;
+    renderLoading();
+
+    try {
+      const { searchUsers } = await import('./database.js');
+      const users = await searchUsers(query, 8);
+      if (searchId !== activeSearchId) return;
+
+      const currentUserId = getStoredUser()?.id;
+      const filtered = (users || []).filter((user) => user?.id && user.id !== currentUserId);
+
+      if (!filtered.length) {
+        renderEmpty();
+        return;
+      }
+
+      renderUsers(filtered);
+    } catch (error) {
+      if (searchId !== activeSearchId) return;
+      console.warn('User search failed:', error);
+      renderError();
+    }
+  }, 300);
+
+  searchInput.addEventListener('input', (e) => {
+    executeSearch(e.target.value);
+  });
+
+  searchInput.addEventListener('focus', () => {
+    if (resultsMenu.innerHTML.trim()) {
+      showResults();
+    }
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      const items = getResultItems();
+      if (!items.length) return;
+      e.preventDefault();
+      showResults();
+      setActiveResult(activeResultIndex + 1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      const items = getResultItems();
+      if (!items.length) return;
+      e.preventDefault();
+      showResults();
+      setActiveResult(activeResultIndex - 1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      const items = getResultItems();
+      if (!items.length || activeResultIndex < 0) return;
+      e.preventDefault();
+      items[activeResultIndex]?.click();
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      closeResults();
+      searchInput.blur();
+    }
+  });
+
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (searchForm.contains(e.target)) return;
+    closeResults();
+  });
 }
 
 function isPublicPage() {

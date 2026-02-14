@@ -3,7 +3,7 @@
  * Handles posts feed functionality
  */
 
-import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
+import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch } from './main.js';
 import { supabase } from './supabase.js';
 import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
@@ -1555,16 +1555,7 @@ function initLoadMore() {
  * Initialize search functionality
  */
 function initSearch() {
-  const searchInput = document.querySelector('form[role="search"] input');
-  if (!searchInput) return;
-
-  searchInput.addEventListener('input', debounce((e) => {
-    const query = e.target.value.trim();
-    if (query.length >= 2) {
-      // TODO: Implement search with Supabase
-      console.log('Searching for:', query);
-    }
-  }, 300));
+  initUserSearch();
 }
 
 /**

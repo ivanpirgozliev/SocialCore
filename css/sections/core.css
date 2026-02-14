@@ -258,6 +258,75 @@ h1, h2, h3, h4, h5, h6 {
   width: auto;
 }
 
+/* ============================================
+   User Search Dropdown
+   ============================================ */
+.user-search-results {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1050;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.user-search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  text-decoration: none;
+  color: var(--gray-800);
+}
+
+.user-search-result-item:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.user-search-result-item.active {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.user-search-result-avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.user-search-result-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-search-result-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-search-result-username {
+  color: var(--gray-500);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-search-result-muted {
+  padding: 0.7rem 0.75rem;
+  color: var(--gray-500);
+  font-size: 0.88rem;
+}
+
 .nav-link {
   color: var(--gray-600) !important;
   font-weight: 500;
