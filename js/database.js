@@ -797,30 +797,41 @@ export async function getFriendsForUser(userId, limit = 6) {
  * @returns {Promise<{ postsCount: number, friendsCount: number, followersCount: number }>}
  */
 export async function getProfileStats(userId) {
-  const [postsResult, friendsResult, followersResult] = await Promise.all([
+  const [postsResult, followsResult, acceptedFriendsResult] = await Promise.all([
     supabase
       .from('posts')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId),
     supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', userId),
+    supabase
       .from('friend_requests')
-      .select('id', { count: 'exact', head: true })
+      .select('requester_id, addressee_id')
       .eq('status', 'accepted')
       .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
-    supabase
-      .from('follows')
-      .select('id', { count: 'exact', head: true })
-      .eq('following_id', userId),
   ]);
 
   if (postsResult.error) throw postsResult.error;
-  if (friendsResult.error) throw friendsResult.error;
-  if (followersResult.error) throw followersResult.error;
+  if (followsResult.error) throw followsResult.error;
+  if (acceptedFriendsResult.error) throw acceptedFriendsResult.error;
+
+  const friendIds = new Set();
+  (acceptedFriendsResult.data || []).forEach((row) => {
+    const otherId = row.requester_id === userId ? row.addressee_id : row.requester_id;
+    if (otherId) friendIds.add(otherId);
+  });
+
+  const followerIds = new Set((followsResult.data || []).map((row) => row.follower_id).filter(Boolean));
+
+  // Friends should imply follow; include both sources so old data remains accurate.
+  const effectiveFollowers = new Set([...followerIds, ...friendIds]);
 
   return {
     postsCount: postsResult.count || 0,
-    friendsCount: friendsResult.count || 0,
-    followersCount: followersResult.count || 0,
+    friendsCount: friendIds.size,
+    followersCount: effectiveFollowers.size,
   };
 }
 
