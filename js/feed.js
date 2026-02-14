@@ -3,7 +3,7 @@
  * Handles posts feed functionality
  */
 
-import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile } from './main.js';
+import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
 import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
@@ -22,12 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize follow actions
   initPeopleYouMayKnowActions();
-
-  // Load notification menu
-  loadNotifications();
-
-  // Initialize notification actions
-  initNotificationActions();
 
   // Initialize post actions (like, comment, share)
   initPostActions();
@@ -313,7 +307,7 @@ function initPeopleYouMayKnowActions() {
     }
 
     button.disabled = false;
-    await Promise.all([initPeopleYouMayKnow(), loadNotifications()]);
+    await Promise.all([initPeopleYouMayKnow(), refreshNotificationsMenu()]);
   });
 }
 
@@ -465,11 +459,11 @@ function initNotificationActions() {
       console.error('Error updating request:', error);
       button.disabled = false;
       showToast('Failed to update request. Please try again.', 'error');
-      await Promise.all([loadNotifications(), initPeopleYouMayKnow()]);
+      await Promise.all([refreshNotificationsMenu(), initPeopleYouMayKnow()]);
       return;
     }
 
-    await Promise.all([loadNotifications(), initPeopleYouMayKnow()]);
+    await Promise.all([refreshNotificationsMenu(), initPeopleYouMayKnow()]);
   });
 }
 

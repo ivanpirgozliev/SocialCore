@@ -66,6 +66,8 @@ function initAppAfterAuth() {
   });
 
   if (!isPublicPage()) {
+    initNotificationsNav();
+    initNotificationsRealtime();
     initMessagingNav();
     initMessagingRealtime();
     initMessagingBar();
@@ -154,6 +156,245 @@ async function getCurrentUserId() {
     return user?.id || null;
   } catch {
     return null;
+  }
+}
+
+let notificationsRealtimeCleanup = null;
+
+function resolveNotificationsUi() {
+  let menu = document.getElementById('notificationsMenu');
+  let toggle = null;
+  let badge = document.getElementById('notificationsBadge');
+
+  if (menu) {
+    toggle = menu.closest('.dropdown')?.querySelector('button[data-bs-toggle="dropdown"]') || null;
+  }
+
+  if (!toggle) {
+    const dropdownToggles = Array.from(document.querySelectorAll('.navbar .dropdown button[data-bs-toggle="dropdown"]'));
+    toggle = dropdownToggles.find((btn) => !!btn.querySelector('.bi-bell')) || null;
+  }
+
+  if (!menu && toggle) {
+    menu = toggle.closest('.dropdown')?.querySelector('ul.dropdown-menu') || null;
+  }
+
+  if (!badge && toggle) {
+    badge = toggle.querySelector('.badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none';
+      badge.textContent = '0';
+      toggle.appendChild(badge);
+    }
+  }
+
+  return { menu, toggle, badge };
+}
+
+function renderNotificationsEmpty(menu, text = 'No new notifications') {
+  if (!menu) return;
+
+  menu.innerHTML = `
+    <li class="dropdown-header">Notifications</li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item py-2 text-center text-muted">${escapeHtml(text)}</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-center text-primary" href="friends.html" data-action="open-friends">See all requests</a></li>
+  `;
+}
+
+function optimisticRemoveNotificationRequest(requestId, badge) {
+  if (!requestId) return;
+
+  const { menu } = resolveNotificationsUi();
+  if (menu) {
+    const menuItem = menu.querySelector(`[data-request-id="${CSS.escape(requestId)}"]`);
+    if (menuItem) menuItem.remove();
+
+    const remainingItems = menu.querySelectorAll('[data-request-id]');
+    if (!remainingItems.length) {
+      renderNotificationsEmpty(menu);
+    }
+  }
+
+  if (badge && !badge.classList.contains('d-none')) {
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = Math.max(0, current - 1);
+    badge.textContent = String(next);
+    badge.classList.toggle('d-none', next === 0);
+  }
+}
+
+export async function refreshNotificationsMenu() {
+  const { menu, badge } = resolveNotificationsUi();
+  if (!menu) return;
+
+  menu.innerHTML = `
+    <li class="dropdown-header">Notifications</li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item py-2 text-center text-muted">Loading...</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item text-center text-primary" href="friends.html" data-action="open-friends">See all requests</a></li>
+  `;
+
+  try {
+    const { getFriendRequests } = await import('./database.js');
+    const requests = await getFriendRequests();
+
+    const pendingCount = requests.length;
+    if (badge) {
+      badge.textContent = String(pendingCount);
+      badge.classList.toggle('d-none', pendingCount === 0);
+    }
+
+    if (!pendingCount) {
+      renderNotificationsEmpty(menu);
+      return;
+    }
+
+    const itemsHtml = requests.map((request) => {
+      const fullName = request?.full_name || request?.username || 'User';
+      const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const requestId = escapeHtml(String(request?.request_id || ''));
+      const profileHref = request?.id ? `profile.html?id=${encodeURIComponent(request.id)}` : 'profile.html';
+
+      return `
+        <li class="px-3 py-2" data-request-id="${requestId}">
+          <div class="d-flex align-items-start gap-2">
+            <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
+              <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="32" height="32" loading="lazy">
+            </a>
+            <div class="flex-grow-1">
+              <div class="small"><strong>${escapeHtml(fullName)}</strong> sent you a friend request</div>
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-primary-gradient btn-sm" type="button" data-action="accept-request" data-request-id="${requestId}">Accept</button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-action="reject-request" data-request-id="${requestId}">Reject</button>
+              </div>
+            </div>
+          </div>
+        </li>
+      `;
+    }).join('');
+
+    menu.innerHTML = `
+      <li class="dropdown-header">Notifications</li>
+      <li><hr class="dropdown-divider"></li>
+      ${itemsHtml}
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-center text-primary" href="friends.html" data-action="open-friends">See all requests</a></li>
+    `;
+  } catch (error) {
+    console.warn('Notifications unavailable', error);
+    if (badge) {
+      badge.textContent = '0';
+      badge.classList.add('d-none');
+    }
+    renderNotificationsEmpty(menu, 'Failed to load notifications');
+  }
+}
+
+function initNotificationsNav() {
+  const { menu, toggle } = resolveNotificationsUi();
+  if (!menu || !toggle) return;
+
+  if (menu.dataset.notificationsBound === 'true') return;
+  menu.dataset.notificationsBound = 'true';
+
+  const dropdownRoot = menu.closest('.dropdown');
+  if (dropdownRoot) {
+    dropdownRoot.addEventListener('show.bs.dropdown', () => {
+      refreshNotificationsMenu().catch(() => {
+        // ignore
+      });
+    });
+  }
+
+  menu.addEventListener('click', async (e) => {
+    const actionEl = e.target.closest('[data-action]');
+    if (!actionEl) return;
+
+    const action = actionEl.dataset.action;
+    if (action === 'open-friends') return;
+
+    const requestId = actionEl.dataset.requestId;
+    if (!requestId) return;
+
+    const { badge } = resolveNotificationsUi();
+    actionEl.disabled = true;
+
+    try {
+      const { acceptFriendRequest, declineFriendRequest } = await import('./database.js');
+
+      if (action === 'accept-request') {
+        optimisticRemoveNotificationRequest(requestId, badge);
+        await acceptFriendRequest(requestId);
+        showToast('Friend request accepted.', 'success');
+      } else if (action === 'reject-request') {
+        optimisticRemoveNotificationRequest(requestId, badge);
+        await declineFriendRequest(requestId);
+        showToast('Friend request rejected.', 'info');
+      }
+
+      await refreshNotificationsMenu();
+      window.dispatchEvent(new CustomEvent('socialcore:friend-requests:changed'));
+    } catch (error) {
+      console.error('Error updating friend request:', error);
+      actionEl.disabled = false;
+      showToast('Failed to update request. Please try again.', 'error');
+      await refreshNotificationsMenu();
+    }
+  });
+
+  refreshNotificationsMenu().catch(() => {
+    // ignore
+  });
+
+  window.addEventListener('socialcore:notifications:refresh', () => {
+    refreshNotificationsMenu().catch(() => {
+      // ignore
+    });
+  });
+}
+
+async function initNotificationsRealtime() {
+  const { menu } = resolveNotificationsUi();
+  if (!menu) return;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
+  try {
+    const { supabase } = await import('./supabase.js');
+
+    if (typeof notificationsRealtimeCleanup === 'function') {
+      notificationsRealtimeCleanup();
+      notificationsRealtimeCleanup = null;
+    }
+
+    const channel = supabase
+      .channel(`realtime:notifications:friend_requests:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${userId}` },
+        () => {
+          refreshNotificationsMenu().catch(() => {
+            // ignore
+          });
+          window.dispatchEvent(new CustomEvent('socialcore:friend-requests:changed'));
+        }
+      )
+      .subscribe();
+
+    notificationsRealtimeCleanup = () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        // ignore
+      }
+    };
+  } catch (error) {
+    console.warn('Notifications realtime unavailable', error);
   }
 }
 

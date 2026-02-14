@@ -5,6 +5,10 @@
 
 import { showToast, formatRelativeTime } from './main.js';
 import { getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, getFriendsList, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend } from './database.js';
+import { supabase } from './supabase.js';
+
+let friendsRealtimeCleanup = null;
+let friendsRefreshTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Friends page loaded');
@@ -13,7 +17,84 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFriendRequests();
   loadSentRequests();
   loadSuggestions();
+
+  initFriendsRealtime();
+
+  window.addEventListener('beforeunload', () => {
+    if (typeof friendsRealtimeCleanup === 'function') {
+      friendsRealtimeCleanup();
+      friendsRealtimeCleanup = null;
+    }
+  });
 });
+
+function scheduleFriendsRefresh() {
+  if (friendsRefreshTimer) {
+    clearTimeout(friendsRefreshTimer);
+  }
+
+  friendsRefreshTimer = setTimeout(() => {
+    Promise.all([
+      loadFriends(),
+      loadFriendRequests(),
+      loadSentRequests(),
+      loadSuggestions(),
+    ]).catch((error) => {
+      console.error('Realtime friends refresh failed:', error);
+    });
+  }, 120);
+}
+
+async function initFriendsRealtime() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
+
+    if (typeof friendsRealtimeCleanup === 'function') {
+      friendsRealtimeCleanup();
+      friendsRealtimeCleanup = null;
+    }
+
+    const channels = [];
+    const userId = user.id;
+
+    const requesterChannel = supabase
+      .channel(`realtime:friends:requester:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `requester_id=eq.${userId}` },
+        () => {
+          scheduleFriendsRefresh();
+        }
+      )
+      .subscribe();
+    channels.push(requesterChannel);
+
+    const addresseeChannel = supabase
+      .channel(`realtime:friends:addressee:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${userId}` },
+        () => {
+          scheduleFriendsRefresh();
+        }
+      )
+      .subscribe();
+    channels.push(addresseeChannel);
+
+    friendsRealtimeCleanup = () => {
+      try {
+        channels.forEach((channel) => {
+          supabase.removeChannel(channel);
+        });
+      } catch {
+        // ignore
+      }
+    };
+  } catch (error) {
+    console.warn('Friends realtime unavailable:', error);
+  }
+}
 
 /**
  * Initialize tab navigation

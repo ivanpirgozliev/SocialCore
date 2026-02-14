@@ -394,12 +394,15 @@ export async function followUser(userId) {
 
   const { error } = await supabase
     .from('follows')
-    .insert([
+    .upsert([
       {
         follower_id: user.id,
         following_id: userId,
       }
-    ]);
+    ], {
+      onConflict: 'follower_id,following_id',
+      ignoreDuplicates: true,
+    });
 
   if (error) throw error;
 }
@@ -555,13 +558,37 @@ export async function acceptFriendRequest(requestId) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('friend_requests')
     .update({ status: 'accepted' })
+    .select('requester_id, addressee_id')
     .eq('id', requestId)
-    .eq('addressee_id', user.id);
+    .eq('addressee_id', user.id)
+    .single();
 
   if (error) throw error;
+
+  // Automatically follow the new friend after accepting the request.
+  // (Mutual follow is completed when the other user also accepts/loads relevant flows.)
+  const requesterId = data?.requester_id;
+  if (requesterId && requesterId !== user.id) {
+    const { error: followError } = await supabase
+      .from('follows')
+      .upsert([
+        {
+          follower_id: user.id,
+          following_id: requesterId,
+        }
+      ], {
+        onConflict: 'follower_id,following_id',
+        ignoreDuplicates: true,
+      });
+
+    if (followError) {
+      // Keep friend acceptance successful even if follow auto-sync fails.
+      console.warn('Auto-follow after accepting friend request failed:', followError);
+    }
+  }
 }
 
 /**
@@ -762,6 +789,39 @@ export async function getFriendsForUser(userId, limit = 6) {
   });
 
   return { friends, total: countData?.count || 0 };
+}
+
+/**
+ * Get profile stats counters
+ * @param {string} userId - Profile user ID
+ * @returns {Promise<{ postsCount: number, friendsCount: number, followersCount: number }>}
+ */
+export async function getProfileStats(userId) {
+  const [postsResult, friendsResult, followersResult] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('friend_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
+    supabase
+      .from('follows')
+      .select('id', { count: 'exact', head: true })
+      .eq('following_id', userId),
+  ]);
+
+  if (postsResult.error) throw postsResult.error;
+  if (friendsResult.error) throw friendsResult.error;
+  if (followersResult.error) throw followersResult.error;
+
+  return {
+    postsCount: postsResult.count || 0,
+    friendsCount: friendsResult.count || 0,
+    followersCount: followersResult.count || 0,
+  };
 }
 
 /**

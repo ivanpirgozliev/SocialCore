@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -16,17 +16,26 @@ let profileView = {
   isOwnProfile: true,
 };
 
+let profileRealtimeCleanup = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserProfile();
 
   // Initialize profile actions
   initProfileActions();
 
-  // Initialize post actions on profile page
-  initPostActions();
-
   // Initialize tab navigation
   initTabNavigation();
+
+  // Subscribe for realtime profile updates
+  initProfileRealtime();
+
+  window.addEventListener('beforeunload', () => {
+    if (typeof profileRealtimeCleanup === 'function') {
+      profileRealtimeCleanup();
+      profileRealtimeCleanup = null;
+    }
+  });
 });
 
 function isUuid(value) {
@@ -132,14 +141,16 @@ async function loadUserProfile() {
     await initFriendActions();
     
     // Load user posts
-    const posts = await getUserPosts(requestedProfileUserId);
-    updatePostsUI(posts, { isOwnProfile });
+    await refreshProfilePosts();
 
     // Load user photos (sidebar card)
     await loadProfilePhotos(requestedProfileUserId);
 
     // Load friends card
     await loadProfileFriends(requestedProfileUserId);
+
+    // Load profile counters (posts, friends, followers)
+    await refreshProfileStats();
 
     // Show Admin Dashboard link if user is admin
     try {
@@ -167,6 +178,143 @@ async function loadUserProfile() {
     // Fallback: use local storage data
     const userData = JSON.parse(localStorage.getItem('socialcore_user') || '{}');
     updateProfileUIFromLocalStorage(userData);
+  }
+}
+
+function setProfileStat(label, value) {
+  const normalizedLabel = String(label || '').trim().toLowerCase();
+  const statItems = document.querySelectorAll('.profile-stats .stat-item');
+  if (!statItems.length) return;
+
+  statItems.forEach((item) => {
+    const labelEl = item.querySelector('.stat-label');
+    const numberEl = item.querySelector('.stat-number');
+    const currentLabel = String(labelEl?.textContent || '').trim().toLowerCase();
+    if (!numberEl || currentLabel !== normalizedLabel) return;
+    const numericValue = Number(value);
+    numberEl.textContent = Number.isFinite(numericValue) ? String(Math.max(0, numericValue)) : '0';
+  });
+}
+
+function updateProfileStatsUI(stats) {
+  if (!stats || typeof stats !== 'object') return;
+
+  if (Object.prototype.hasOwnProperty.call(stats, 'postsCount')) {
+    setProfileStat('Posts', stats.postsCount);
+  }
+  if (Object.prototype.hasOwnProperty.call(stats, 'friendsCount')) {
+    setProfileStat('Friends', stats.friendsCount);
+
+    const countBadge = document.getElementById('profileFriendsCount');
+    if (countBadge) {
+      const numeric = Number(stats.friendsCount);
+      countBadge.textContent = Number.isFinite(numeric) ? String(Math.max(0, numeric)) : '0';
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(stats, 'followersCount')) {
+    setProfileStat('Followers', stats.followersCount);
+  }
+}
+
+async function refreshProfilePosts() {
+  if (!profileView.profileUserId) return;
+  const posts = await getUserPosts(profileView.profileUserId);
+  updatePostsUI(posts, { isOwnProfile: profileView.isOwnProfile });
+}
+
+async function refreshProfileStats() {
+  if (!profileView.profileUserId) return;
+
+  try {
+    const stats = await getProfileStats(profileView.profileUserId);
+    updateProfileStatsUI(stats);
+  } catch (error) {
+    console.error('Error loading profile stats:', error);
+  }
+}
+
+function initProfileRealtime() {
+  if (!profileView.profileUserId) return;
+
+  try {
+    if (typeof profileRealtimeCleanup === 'function') {
+      profileRealtimeCleanup();
+      profileRealtimeCleanup = null;
+    }
+
+    const watchedUserId = profileView.profileUserId;
+    const channels = [];
+
+    const postsChannel = supabase
+      .channel(`realtime:profile:posts:${watchedUserId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'posts', filter: `user_id=eq.${watchedUserId}` },
+        async () => {
+          await Promise.all([
+            refreshProfilePosts(),
+            refreshProfileStats(),
+          ]);
+        }
+      )
+      .subscribe();
+    channels.push(postsChannel);
+
+    const followsChannel = supabase
+      .channel(`realtime:profile:follows:${watchedUserId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${watchedUserId}` },
+        async () => {
+          await refreshProfileStats();
+        }
+      )
+      .subscribe();
+    channels.push(followsChannel);
+
+    const friendReqRequesterChannel = supabase
+      .channel(`realtime:profile:friend_requests:requester:${watchedUserId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `requester_id=eq.${watchedUserId}` },
+        async () => {
+          await Promise.all([
+            loadProfileFriends(watchedUserId),
+            refreshProfileStats(),
+            initFriendActions(),
+          ]);
+        }
+      )
+      .subscribe();
+    channels.push(friendReqRequesterChannel);
+
+    const friendReqAddresseeChannel = supabase
+      .channel(`realtime:profile:friend_requests:addressee:${watchedUserId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${watchedUserId}` },
+        async () => {
+          await Promise.all([
+            loadProfileFriends(watchedUserId),
+            refreshProfileStats(),
+            initFriendActions(),
+          ]);
+        }
+      )
+      .subscribe();
+    channels.push(friendReqAddresseeChannel);
+
+    profileRealtimeCleanup = () => {
+      try {
+        channels.forEach((ch) => {
+          supabase.removeChannel(ch);
+        });
+      } catch {
+        // ignore
+      }
+    };
+  } catch (error) {
+    console.warn('Profile realtime unavailable:', error);
   }
 }
 
@@ -666,6 +814,8 @@ function updatePostsUI(posts, { isOwnProfile } = {}) {
     const postCard = createPostCard(post);
     postsContainer.insertAdjacentHTML('beforeend', postCard);
   });
+
+  initPostActions();
 }
 
 /**
