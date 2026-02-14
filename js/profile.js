@@ -164,16 +164,18 @@ async function loadUserProfile() {
     // Load profile counters (posts, friends, followers)
     await refreshProfileStats();
 
-    // Show Admin Dashboard link if user is admin
+    // Show Admin Dashboard link only when admin is on their own profile page
     try {
       const isAdmin = await checkIsAdmin(authUserId);
       profileView.isAdmin = isAdmin;
-      if (isAdmin) {
-        const adminLink = document.getElementById('adminDashboardLink');
-        if (adminLink) adminLink.classList.remove('d-none');
+      const adminLink = document.getElementById('adminDashboardLink');
+      if (adminLink) {
+        adminLink.classList.toggle('d-none', !(isAdmin && isOwnProfile));
       }
     } catch (e) {
       profileView.isAdmin = false;
+      const adminLink = document.getElementById('adminDashboardLink');
+      if (adminLink) adminLink.classList.add('d-none');
       // Silently ignore - non-admin users won't see the link
     }
     
