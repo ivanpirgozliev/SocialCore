@@ -4,3 +4,19 @@
 @import url('./sections/responsive-animations.css');
 @import url('./sections/enhancements.css');
 
+#photosGrid .photos-grid-tile {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	background-color: white;
+}
+
+#photosGrid .photos-grid-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+

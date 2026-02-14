@@ -326,8 +326,8 @@ async function loadPhotos(userId) {
 
       return `
         <div class="col-6 col-md-4 col-lg-3">
-          <a href="${publicUrl}" target="_blank" rel="noreferrer" class="d-block text-decoration-none">
-            <img src="${publicUrl}" alt="Photo" class="img-fluid rounded" loading="lazy">
+          <a href="${publicUrl}" target="_blank" rel="noreferrer" class="photos-grid-tile d-block text-decoration-none">
+            <img src="${publicUrl}" alt="Photo" class="photos-grid-image" loading="lazy">
           </a>
         </div>
       `;

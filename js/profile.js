@@ -428,9 +428,9 @@ function renderFriendActions(container, relationship, { isFollowingUser = false 
 
   const followBtn = buildActionButton(
     isFollowingUser
-      ? '<i class="bi bi-person-check me-1"></i>Following'
+      ? '<i class="bi bi-person-dash me-1"></i>Unfollow'
       : '<i class="bi bi-person-plus me-1"></i>Follow',
-    isFollowingUser ? 'btn-outline-secondary' : 'btn-outline-primary',
+    isFollowingUser ? 'btn-outline-danger' : 'btn-outline-primary',
     false,
     true
   );
