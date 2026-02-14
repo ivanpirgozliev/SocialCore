@@ -75,7 +75,7 @@ export async function getFeedPosts(limit = 10, offset = 0) {
  * @param {number} offset - Offset for pagination
  * @returns {Promise<Array>} Array of posts
  */
-export async function getFollowingFeedPosts(limit = 10, offset = 0) {
+export async function getFollowingFeedPosts(limit = 10, offset = 0, selectedAuthorId = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
@@ -95,7 +95,13 @@ export async function getFollowingFeedPosts(limit = 10, offset = 0) {
 
   authorIds.delete(user.id);
 
-  const ids = Array.from(authorIds);
+  let ids = Array.from(authorIds);
+
+  if (selectedAuthorId) {
+    if (!authorIds.has(selectedAuthorId)) return [];
+    ids = [selectedAuthorId];
+  }
+
   if (!ids.length) return [];
 
   const { data, error } = await supabase
@@ -117,6 +123,36 @@ export async function getFollowingFeedPosts(limit = 10, offset = 0) {
 
   if (error) throw error;
   return hydratePostLikeState(data || []);
+}
+
+/**
+ * Get merged list of accounts for Following tab filters
+ * Includes users the current user follows and users they are friends with
+ * @returns {Promise<Array>} Array of unique profile objects
+ */
+export async function getFollowingFeedAccounts() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const [following, friends] = await Promise.all([
+    getFollowing(user.id),
+    getFriendsList(),
+  ]);
+
+  const byId = new Map();
+
+  (following || []).forEach((profile) => {
+    if (!profile?.id || profile.id === user.id) return;
+    byId.set(profile.id, { ...profile });
+  });
+
+  (friends || []).forEach((profile) => {
+    if (!profile?.id || profile.id === user.id) return;
+    if (byId.has(profile.id)) return;
+    byId.set(profile.id, { ...profile });
+  });
+
+  return Array.from(byId.values());
 }
 
 /**

@@ -103,3 +103,84 @@
   color: white !important;
   border-left-color: transparent !important;
 }
+
+/* ============================================
+   Following Filters
+   ============================================ */
+.following-filters-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.following-filters-list {
+  flex: 1;
+  display: flex;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-behavior: smooth;
+  cursor: grab;
+  user-select: none;
+}
+
+.following-filters-list.dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+}
+
+.following-filters-list::-webkit-scrollbar {
+  height: 6px;
+}
+
+.following-filters-scroll-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  background: white;
+  color: var(--gray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.following-filters-scroll-btn:hover {
+  background: var(--gray-100);
+}
+
+.following-filter-chip {
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  border-radius: var(--radius-full);
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.following-filter-chip:hover {
+  background: var(--gray-100);
+}
+
+.following-filter-chip.active {
+  background: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+}
+
+.following-filter-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.following-filter-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}

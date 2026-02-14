@@ -4,13 +4,15 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
-import { getFeedPosts, getFollowingFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
+import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
 let feedOffset = 0;
 let isLoadingFeed = false;
 let currentFeedTab = 'for-you';
+let followingAccounts = [];
+let selectedFollowingAuthorId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initFeedTabs();
@@ -54,9 +56,15 @@ function initFeedTabs() {
       applyFeedTabSelection(tabButtons, selectedTab);
       persistFeedTab(selectedTab);
 
+      toggleFollowingFiltersVisibility();
+
       loadInitialFeedPosts();
     });
   });
+
+  initFollowingFiltersActions();
+  initFollowingFiltersScrollControls();
+  toggleFollowingFiltersVisibility();
 }
 
 function resolveInitialFeedTab(tabButtons) {
@@ -105,7 +113,7 @@ function persistFeedTab(selectedTab) {
 
 async function fetchFeedPosts(limit, offset) {
   if (currentFeedTab === 'following') {
-    return getFollowingFeedPosts(limit, offset);
+    return getFollowingFeedPosts(limit, offset, selectedFollowingAuthorId);
   }
 
   return getFeedPosts(limit, offset);
@@ -119,14 +127,20 @@ async function loadInitialFeedPosts() {
   feedOffset = 0;
 
   try {
+    if (currentFeedTab === 'following') {
+      await loadFollowingAccounts();
+    }
+
     const posts = await fetchFeedPosts(FEED_PAGE_SIZE, feedOffset);
     postsFeed.innerHTML = '';
 
     if (!posts.length) {
       const emptyState = currentFeedTab === 'following'
         ? buildEmptyStateHtml({
-          title: 'No following posts yet',
-          description: 'Follow people or add friends to see their posts here.',
+          title: selectedFollowingAuthorId ? 'No posts from this account yet' : 'No following posts yet',
+          description: selectedFollowingAuthorId
+            ? 'Try another account from the list above or switch to For You.'
+            : 'Follow people or add friends to see their posts here.',
         })
         : buildEmptyStateHtml();
 
@@ -260,6 +274,225 @@ function toggleLoadMore(show) {
   const container = document.getElementById('loadMoreContainer');
   if (!container) return;
   container.classList.toggle('d-none', !show);
+}
+
+function getFollowingFiltersElements() {
+  const card = document.getElementById('followingFiltersCard');
+  const list = document.getElementById('followingFiltersList');
+  const prevBtn = document.getElementById('followingFiltersPrev');
+  const nextBtn = document.getElementById('followingFiltersNext');
+  return { card, list, prevBtn, nextBtn };
+}
+
+function toggleFollowingFiltersVisibility() {
+  const { card } = getFollowingFiltersElements();
+  if (!card) return;
+  card.classList.toggle('d-none', currentFeedTab !== 'following');
+
+  if (currentFeedTab === 'following') {
+    window.requestAnimationFrame(() => {
+      updateFollowingFiltersScrollControls();
+    });
+  }
+}
+
+function buildFollowingAccountChip(account, { active = false } = {}) {
+  const fullName = account?.full_name || account?.username || 'User';
+  const avatarUrl = account?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+
+  return `
+    <button type="button" class="following-filter-chip ${active ? 'active' : ''}" data-following-id="${escapeHtml(String(account?.id || ''))}" title="${escapeHtml(fullName)}">
+      <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="following-filter-avatar" loading="lazy">
+      <span class="following-filter-name">${escapeHtml(fullName)}</span>
+    </button>
+  `;
+}
+
+function renderFollowingFilters() {
+  const { list } = getFollowingFiltersElements();
+  if (!list) return;
+
+  if (!followingAccounts.length) {
+    list.innerHTML = '<div class="text-muted small px-2 py-1">No following accounts yet.</div>';
+    updateFollowingFiltersScrollControls();
+    return;
+  }
+
+  const orderedAccounts = [...followingAccounts];
+  if (selectedFollowingAuthorId) {
+    orderedAccounts.sort((a, b) => {
+      if (a.id === selectedFollowingAuthorId) return -1;
+      if (b.id === selectedFollowingAuthorId) return 1;
+      return 0;
+    });
+  }
+
+  const allChip = `
+    <button type="button" class="following-filter-chip ${selectedFollowingAuthorId ? '' : 'active'}" data-following-id="all">
+      <span class="following-filter-name">All</span>
+    </button>
+  `;
+
+  const chips = orderedAccounts
+    .map((account) => buildFollowingAccountChip(account, { active: account.id === selectedFollowingAuthorId }))
+    .join('');
+
+  list.innerHTML = `${allChip}${chips}`;
+  updateFollowingFiltersScrollControls();
+}
+
+async function loadFollowingAccounts() {
+  const { list } = getFollowingFiltersElements();
+  if (!list) return;
+
+  list.innerHTML = '<div class="text-muted small px-2 py-1">Loading following accounts...</div>';
+
+  try {
+    followingAccounts = await getFollowingFeedAccounts();
+
+    if (selectedFollowingAuthorId && !followingAccounts.some((account) => account.id === selectedFollowingAuthorId)) {
+      selectedFollowingAuthorId = null;
+    }
+
+    renderFollowingFilters();
+  } catch (error) {
+    console.error('Error loading following accounts:', error);
+    list.innerHTML = '<div class="text-muted small px-2 py-1">Failed to load following accounts.</div>';
+  }
+}
+
+function initFollowingFiltersActions() {
+  const { list } = getFollowingFiltersElements();
+  if (!list) return;
+
+  list.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-following-id]');
+    if (!chip) return;
+
+    const selectedId = chip.getAttribute('data-following-id');
+    if (!selectedId) return;
+
+    if (selectedId === 'all') {
+      if (selectedFollowingAuthorId === null) return;
+      selectedFollowingAuthorId = null;
+      renderFollowingFilters();
+      loadInitialFeedPosts();
+      return;
+    }
+
+    if (selectedFollowingAuthorId === selectedId) return;
+
+    selectedFollowingAuthorId = selectedId;
+    renderFollowingFilters();
+    loadInitialFeedPosts();
+  });
+}
+
+function updateFollowingFiltersScrollControls() {
+  const { list, prevBtn, nextBtn } = getFollowingFiltersElements();
+  if (!list || !prevBtn || !nextBtn) return;
+
+  if (currentFeedTab !== 'following') {
+    prevBtn.classList.add('d-none');
+    nextBtn.classList.add('d-none');
+    return;
+  }
+
+  const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth);
+  const hasOverflow = maxScrollLeft > 2;
+
+  if (!hasOverflow) {
+    prevBtn.classList.add('d-none');
+    nextBtn.classList.add('d-none');
+    return;
+  }
+
+  const atStart = list.scrollLeft <= 2;
+  const atEnd = list.scrollLeft >= maxScrollLeft - 2;
+
+  prevBtn.classList.toggle('d-none', atStart);
+  nextBtn.classList.toggle('d-none', atEnd);
+}
+
+function initFollowingFiltersScrollControls() {
+  const { list, prevBtn, nextBtn } = getFollowingFiltersElements();
+  if (!list || !prevBtn || !nextBtn) return;
+  if (list.dataset.followingScrollBound === 'true') return;
+  list.dataset.followingScrollBound = 'true';
+
+  const scrollStep = 260;
+
+  prevBtn.addEventListener('click', () => {
+    list.scrollBy({ left: -scrollStep, behavior: 'smooth' });
+  });
+
+  nextBtn.addEventListener('click', () => {
+    list.scrollBy({ left: scrollStep, behavior: 'smooth' });
+  });
+
+  list.addEventListener('scroll', () => {
+    updateFollowingFiltersScrollControls();
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    updateFollowingFiltersScrollControls();
+  });
+
+  initFollowingFiltersDragScroll(list);
+
+  updateFollowingFiltersScrollControls();
+}
+
+function initFollowingFiltersDragScroll(list) {
+  if (!list || list.dataset.followingDragBound === 'true') return;
+  list.dataset.followingDragBound = 'true';
+
+  let isPointerDown = false;
+  let isDragging = false;
+  let startX = 0;
+  let startScrollLeft = 0;
+  let movedDistance = 0;
+
+  list.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'touch') return;
+    isPointerDown = true;
+    isDragging = false;
+    movedDistance = 0;
+    startX = event.clientX;
+    startScrollLeft = list.scrollLeft;
+    list.classList.add('dragging');
+  });
+
+  list.addEventListener('pointermove', (event) => {
+    if (!isPointerDown) return;
+
+    const diffX = event.clientX - startX;
+    movedDistance = Math.max(movedDistance, Math.abs(diffX));
+    if (movedDistance > 4) {
+      isDragging = true;
+    }
+
+    if (!isDragging) return;
+    list.scrollLeft = startScrollLeft - diffX;
+  });
+
+  const endDrag = () => {
+    isPointerDown = false;
+    list.classList.remove('dragging');
+    window.requestAnimationFrame(() => {
+      isDragging = false;
+    });
+  };
+
+  list.addEventListener('pointerup', endDrag);
+  list.addEventListener('pointerleave', endDrag);
+  list.addEventListener('pointercancel', endDrag);
+
+  list.addEventListener('click', (event) => {
+    if (!isDragging) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
 }
 
 async function initCurrentUserFeedUI() {
