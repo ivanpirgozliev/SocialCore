@@ -466,6 +466,25 @@ export async function deleteComment(commentId) {
   if (error) throw error;
 }
 
+/**
+ * Update a comment
+ * @param {string} commentId - Comment ID
+ * @param {string} content - Updated comment content
+ */
+export async function updateComment(commentId, content) {
+  const normalized = String(content || '').trim();
+  if (!normalized) {
+    throw new Error('Comment cannot be empty');
+  }
+
+  const { error } = await supabase
+    .from('comments')
+    .update({ content: normalized })
+    .eq('id', commentId);
+
+  if (error) throw error;
+}
+
 // ============================================
 // FOLLOWS
 // ============================================

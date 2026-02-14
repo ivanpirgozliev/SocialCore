@@ -4,7 +4,8 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
-import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
+import { supabase } from './supabase.js';
+import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
@@ -13,9 +14,14 @@ let isLoadingFeed = false;
 let currentFeedTab = 'for-you';
 let followingAccounts = [];
 let selectedFollowingAuthorId = null;
+let commentPermissions = {
+  userId: null,
+  isAdmin: false,
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   initFeedTabs();
+  initCommentPermissions();
 
   // Hydrate current user (avatar/name/username) and update Feed UI
   initCurrentUserFeedUI();
@@ -38,6 +44,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize search functionality
   initSearch();
 });
+
+async function initCommentPermissions() {
+  const storedUser = getStoredUser();
+  if (storedUser?.id) {
+    commentPermissions.userId = storedUser.id;
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
+
+    commentPermissions.userId = user.id;
+    commentPermissions.isAdmin = await checkIsAdmin(user.id);
+  } catch (error) {
+    console.warn('Failed to resolve comment permissions:', error);
+  }
+}
+
+function canManageComment(comment) {
+  if (!comment?.id) return false;
+  if (commentPermissions.isAdmin) return true;
+  return Boolean(commentPermissions.userId && comment.user_id === commentPermissions.userId);
+}
 
 function initFeedTabs() {
   const tabButtons = document.querySelectorAll('[data-feed-tab]');
@@ -979,7 +1008,7 @@ function handleComment(button, postId) {
   });
 
   commentSection.addEventListener('click', (e) => {
-    const actionBtn = e.target.closest('.comment-action-btn');
+    const actionBtn = e.target.closest('[data-action][data-comment-id]');
     const toggleBtn = e.target.closest('.comment-toggle-replies');
 
     if (toggleBtn) {
@@ -996,6 +1025,25 @@ function handleComment(button, postId) {
 
     if (action === 'like-comment' && commentId) {
       handleCommentLike(actionBtn, commentId);
+    }
+
+    if (action === 'edit-comment' && commentId) {
+      const commentItem = actionBtn.closest('.comment-item');
+      handleEditComment(commentId, commentItem, postId, commentSection);
+    }
+
+    if (action === 'save-edit-comment' && commentId) {
+      const commentItem = actionBtn.closest('.comment-item');
+      handleSaveCommentEdit(commentId, commentItem, postId, commentSection);
+    }
+
+    if (action === 'cancel-edit-comment' && commentId) {
+      const commentItem = actionBtn.closest('.comment-item');
+      handleCancelCommentEdit(commentItem);
+    }
+
+    if (action === 'delete-comment' && commentId) {
+      handleDeleteComment(commentId, postId, commentSection);
     }
 
     if (action === 'reply-comment' && commentId) {
@@ -1102,6 +1150,12 @@ function renderCommentItem(comment, depth, postId) {
   const margin = Math.min(depth, 6) * 16;
   const replyCount = countReplies(comment);
   const replyLabel = replyCount === 1 ? 'reply' : 'replies';
+  const manageActions = canManageComment(comment)
+    ? `
+      <button class="comment-action-btn" data-action="edit-comment" data-comment-id="${safeId}">Edit</button>
+      <button class="comment-action-btn text-danger" data-action="delete-comment" data-comment-id="${safeId}">Delete</button>
+    `
+    : '';
 
   const repliesHtml = (comment.replies || []).map((reply) => renderCommentItem(reply, depth + 1, postId)).join('');
 
@@ -1111,13 +1165,14 @@ function renderCommentItem(comment, depth, postId) {
         <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
         <div class="comment-bubble">
           <strong class="d-block small">${escapeHtml(fullName)}</strong>
-          <span class="small">${escapeHtml(comment.content || '')}</span>
+          <span class="small comment-content-text">${escapeHtml(comment.content || '')}</span>
           <div class="comment-actions">
             <button class="comment-action-btn ${likeClass}" data-action="like-comment" data-comment-id="${safeId}">
               <i class="bi ${likeIcon}"></i>
               <span>${likesCount}</span>
             </button>
             <button class="comment-action-btn" data-action="reply-comment" data-comment-id="${safeId}">Reply</button>
+            ${manageActions}
             ${replyCount ? `<span class="comment-reply-count comment-toggle-replies" data-comment-id="${safeId}">${replyCount} ${replyLabel}</span>` : ''}
           </div>
         </div>
@@ -1237,6 +1292,158 @@ async function submitReply(input, postId, parentCommentId, commentSection) {
     showToast('Failed to post reply. Please try again.', 'error');
   } finally {
     input.disabled = false;
+  }
+}
+
+function updatePostCommentCount(commentSection, delta) {
+  const postCard = commentSection?.closest('.post-card');
+  const commentBtn = postCard?.querySelector('[data-action="comment"] span');
+  if (!commentBtn) return;
+
+  const current = parseInt(commentBtn.textContent, 10) || 0;
+  const next = Math.max(0, current + delta);
+  commentBtn.textContent = String(next);
+}
+
+async function handleDeleteComment(commentId, postId, commentSection) {
+  const confirmed = window.confirm('Delete this comment?');
+  if (!confirmed) return;
+
+  try {
+    await deleteComment(commentId);
+    updatePostCommentCount(commentSection, -1);
+    await loadComments(postId, commentSection);
+    showToast('Comment deleted.', 'info');
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    showToast('Failed to delete comment.', 'error');
+  }
+}
+
+async function handleEditComment(commentId, commentItem, postId, commentSection) {
+  startInlineCommentEdit(commentId, commentItem, postId, commentSection);
+}
+
+function setCommentEditingState(commentItem, editing) {
+  if (!commentItem) return;
+
+  const actionControls = commentItem.querySelectorAll('.comment-actions > .comment-action-btn, .comment-actions > .comment-reply-count');
+  actionControls.forEach((control) => {
+    control.classList.toggle('d-none', editing);
+  });
+}
+
+function startInlineCommentEdit(commentId, commentItem, postId, commentSection) {
+  if (!commentItem || commentItem.dataset.editing === 'true') return;
+
+  const contentEl = commentItem.querySelector('.comment-content-text');
+  const currentContent = String(contentEl?.textContent || '').trim();
+  if (!contentEl || !currentContent) return;
+
+  commentItem.dataset.editing = 'true';
+  commentItem.dataset.originalCommentContent = currentContent;
+
+  setCommentEditingState(commentItem, true);
+  contentEl.classList.add('d-none');
+
+  const editor = document.createElement('div');
+  editor.className = 'comment-edit-form mt-2';
+
+  const group = document.createElement('div');
+  group.className = 'input-group input-group-sm';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-control comment-edit-input';
+  input.value = currentContent;
+  input.maxLength = 1000;
+
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'btn btn-primary-gradient';
+  saveBtn.dataset.action = 'save-edit-comment';
+  saveBtn.dataset.commentId = String(commentId || '');
+  saveBtn.textContent = 'Save';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn btn-outline-secondary';
+  cancelBtn.dataset.action = 'cancel-edit-comment';
+  cancelBtn.dataset.commentId = String(commentId || '');
+  cancelBtn.textContent = 'Cancel';
+
+  group.appendChild(input);
+  group.appendChild(saveBtn);
+  group.appendChild(cancelBtn);
+  editor.appendChild(group);
+  contentEl.after(editor);
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveBtn.click();
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelBtn.click();
+    }
+  });
+
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function handleCancelCommentEdit(commentItem) {
+  if (!commentItem) return;
+
+  const contentEl = commentItem.querySelector('.comment-content-text');
+  const editor = commentItem.querySelector('.comment-edit-form');
+  if (editor) editor.remove();
+
+  if (contentEl) {
+    const original = String(commentItem.dataset.originalCommentContent || contentEl.textContent || '').trim();
+    contentEl.textContent = original;
+    contentEl.classList.remove('d-none');
+  }
+
+  delete commentItem.dataset.editing;
+  delete commentItem.dataset.originalCommentContent;
+  setCommentEditingState(commentItem, false);
+}
+
+async function handleSaveCommentEdit(commentId, commentItem, postId, commentSection) {
+  if (!commentItem) return;
+
+  const input = commentItem.querySelector('.comment-edit-input');
+  const original = String(commentItem.dataset.originalCommentContent || '').trim();
+  const normalized = String(input?.value || '').trim();
+
+  if (!normalized) {
+    showToast('Comment cannot be empty.', 'warning');
+    input?.focus();
+    return;
+  }
+
+  if (normalized === original) {
+    handleCancelCommentEdit(commentItem);
+    return;
+  }
+
+  const buttons = commentItem.querySelectorAll('.comment-edit-form button');
+  buttons.forEach((btn) => {
+    btn.disabled = true;
+  });
+
+  try {
+    await updateComment(commentId, normalized);
+    await loadComments(postId, commentSection);
+    showToast('Comment updated.', 'success');
+  } catch (error) {
+    console.error('Error updating comment:', error);
+    buttons.forEach((btn) => {
+      btn.disabled = false;
+    });
+    showToast('Failed to update comment.', 'error');
   }
 }
 
