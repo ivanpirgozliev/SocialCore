@@ -266,7 +266,10 @@ function initProfileRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${watchedUserId}` },
         async () => {
-          await refreshProfileStats();
+          await Promise.all([
+            refreshProfileStats(),
+            initFriendActions(),
+          ]);
         }
       )
       .subscribe();
@@ -383,17 +386,67 @@ async function initFriendActions() {
   if (profileView.isOwnProfile || !profileView.profileUserId) return;
 
   try {
-    const relationship = await getFriendRelationship(profileView.profileUserId);
-    renderFriendActions(container, relationship);
+    const [relationship, following] = await Promise.all([
+      getFriendRelationship(profileView.profileUserId),
+      isFollowing(profileView.profileUserId),
+    ]);
+
+    let isFollowingUser = !!following;
+
+    // If users are already friends, ensure current user follows the profile as well.
+    // This enforces "friend => follow" without blocking UI if the follow call fails.
+    if (relationship?.status === 'accepted' && !isFollowingUser) {
+      try {
+        await followUser(profileView.profileUserId);
+        isFollowingUser = true;
+      } catch (autoFollowError) {
+        console.warn('Auto-follow for accepted friend failed:', autoFollowError);
+      }
+    }
+
+    renderFriendActions(container, relationship, { isFollowingUser });
   } catch (error) {
     console.error('Error loading friend actions:', error);
   }
 }
 
-function renderFriendActions(container, relationship) {
+function renderFriendActions(container, relationship, { isFollowingUser = false } = {}) {
   const status = relationship?.status || 'none';
   const direction = relationship?.direction || 'none';
   const requestId = relationship?.requestId;
+
+  const followBtn = buildActionButton(
+    isFollowingUser
+      ? '<i class="bi bi-person-check me-1"></i>Following'
+      : '<i class="bi bi-person-plus me-1"></i>Follow',
+    isFollowingUser ? 'btn-outline-secondary' : 'btn-outline-primary',
+    false,
+    true
+  );
+
+  followBtn.addEventListener('click', async () => {
+    followBtn.disabled = true;
+    try {
+      if (isFollowingUser) {
+        await unfollowUser(profileView.profileUserId);
+        showToast('Unfollowed user.', 'info');
+      } else {
+        await followUser(profileView.profileUserId);
+        showToast('You are now following this user.', 'success');
+      }
+
+      await Promise.all([
+        initFriendActions(),
+        refreshProfileStats(),
+      ]);
+    } catch (error) {
+      console.error('Error updating follow status:', error);
+      followBtn.disabled = false;
+      showToast('Failed to update follow status.', 'error');
+    }
+  });
+
+  container.appendChild(followBtn);
 
   if (status === 'accepted') {
     const friendsBtn = buildActionButton('<i class="bi bi-people me-1"></i>Friends', 'btn-outline-secondary', true, true);
