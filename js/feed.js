@@ -4,7 +4,7 @@
  */
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu } from './main.js';
-import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
+import { getFeedPosts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 let feedOffset = 0;
@@ -208,21 +208,30 @@ async function initPeopleYouMayKnow() {
   list.innerHTML = '<div class="text-muted small">Loading suggestions...</div>';
 
   try {
-    const [requests, suggestions] = await Promise.all([
+    const [requests, outgoingRequests, suggestions] = await Promise.all([
       getFriendRequests(),
+      getOutgoingFriendRequests(),
       getFriendSuggestions(8),
     ]);
 
-    if (!requests.length && !suggestions.length) {
+    if (!requests.length && !outgoingRequests.length && !suggestions.length) {
       list.innerHTML = '<div class="text-muted small">No suggestions right now.</div>';
       list.classList.remove('has-overflow');
       return;
     }
 
+    const outgoingHtml = outgoingRequests
+      .map((request) => buildSuggestionHtml({
+        ...request,
+        pending_outgoing: true,
+      }))
+      .join('');
+
     const requestHtml = requests.map((request) => buildIncomingRequestHtml(request)).join('');
     const suggestionHtml = suggestions.map((user) => buildSuggestionHtml(user)).join('');
 
-    list.innerHTML = `${requestHtml}${suggestionHtml}`;
+    // Keep outgoing pending requests visible and prioritized until accepted/declined.
+    list.innerHTML = `${outgoingHtml}${requestHtml}${suggestionHtml}`;
     setupScrollHint(list);
   } catch (error) {
     console.error('Error loading suggestions:', error);
@@ -315,8 +324,17 @@ function buildSuggestionHtml(user) {
   const fullName = user?.full_name || user?.username || 'User';
   const profileHref = user?.id ? `profile.html?id=${encodeURIComponent(user.id)}` : 'profile.html';
   const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const isOutgoingPending = !!user?.pending_outgoing;
   const mutualFriends = Number.isFinite(user?.mutual_friends) ? user.mutual_friends : 0;
   const mutualLabel = mutualFriends === 1 ? 'mutual friend' : 'mutual friends';
+  const metaText = isOutgoingPending
+    ? 'Friend request sent'
+    : `${mutualFriends} ${mutualLabel}`;
+
+  const actionBtnClass = isOutgoingPending ? 'btn-outline-secondary' : 'btn-primary-gradient';
+  const actionBtnState = isOutgoingPending ? 'pending' : 'none';
+  const actionBtnIcon = isOutgoingPending ? 'bi-x-circle' : 'bi-person-plus';
+  const actionBtnLabel = isOutgoingPending ? 'Cancel Request' : 'Add Friend';
 
   return `
     <div class="suggestion-card" data-user-id="${escapeHtml(String(user?.id || ''))}">
@@ -327,11 +345,11 @@ function buildSuggestionHtml(user) {
           </a>
           <div class="flex-grow-1">
             <a href="${escapeHtml(profileHref)}" class="friend-name mb-0 text-decoration-none">${escapeHtml(fullName)}</a>
-            <small class="text-muted d-block mutual-friends">${mutualFriends} ${mutualLabel}</small>
+            <small class="text-muted d-block mutual-friends">${escapeHtml(metaText)}</small>
           </div>
         </div>
-        <button class="btn btn-primary-gradient btn-sm suggestion-action" type="button" data-action="add-friend" data-state="none" data-user-id="${escapeHtml(String(user?.id || ''))}">
-          <i class="bi bi-person-plus me-1"></i>Add Friend
+        <button class="btn ${actionBtnClass} btn-sm suggestion-action" type="button" data-action="add-friend" data-state="${actionBtnState}" data-user-id="${escapeHtml(String(user?.id || ''))}">
+          <i class="bi ${actionBtnIcon} me-1"></i>${actionBtnLabel}
         </button>
       </div>
     </div>
