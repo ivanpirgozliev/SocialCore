@@ -3,6 +3,7 @@
 @import url('./sections/footer-utilities.css');
 @import url('./sections/responsive-animations.css');
 @import url('./sections/enhancements.css');
+@import url('./styles.css');
 
 #photosGrid .photos-grid-tile {
 	position: relative;
