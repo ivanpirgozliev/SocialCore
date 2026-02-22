@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initAppAfterAuth() {
   initNavbarBrandLink();
+  initLogoutActions();
 
   // Initialize Bootstrap tooltips
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -66,6 +67,10 @@ function initAppAfterAuth() {
   refreshStoredUserFromProfile().then(() => {
     initNavbarUserAvatar();
   });
+
+  if (!isPublicPage()) {
+    initMobileXNavigation();
+  }
 
   if (!isPublicPage()) {
     initUserSearch();
@@ -261,6 +266,215 @@ function isPublicPage() {
   return new Set(['index.html', 'login.html', 'register.html']).has(currentPage);
 }
 
+function resolvePageHref(pageName) {
+  const inPages = window.location.pathname.includes('/pages/');
+  return inPages ? `${pageName}.html` : `pages/${pageName}.html`;
+}
+
+function resolveCurrentPage() {
+  return window.location.pathname.split('/').pop() || 'index.html';
+}
+
+function buildMobileNavItem({ icon, label, href = '#', isActive = false, action = '' }) {
+  const safeHref = escapeHtml(href || '#');
+  const safeLabel = escapeHtml(label || '');
+  const safeActionAttr = action ? ` data-mobile-action="${escapeHtml(action)}"` : '';
+
+  return `
+    <a class="mobile-bottom-nav-item${isActive ? ' is-active' : ''}" href="${safeHref}" aria-label="${safeLabel}"${safeActionAttr}>
+      <i class="bi ${escapeHtml(icon || 'bi-circle')}" aria-hidden="true"></i>
+      <span>${safeLabel}</span>
+    </a>
+  `;
+}
+
+function initMobileXNavigation() {
+  const body = document.body;
+  const navbar = document.querySelector('.navbar');
+  const navbarContainer = navbar?.querySelector('.container');
+
+  if (!body || !navbar || !navbarContainer) return;
+  if (body.dataset.mobileXNavInitialized === 'true') return;
+
+  body.dataset.mobileXNavInitialized = 'true';
+  body.classList.add('mobile-x-ui');
+
+  const currentPage = resolveCurrentPage();
+  const brandLink = navbar.querySelector('.navbar-brand');
+  const brandImg = brandLink?.querySelector('img');
+  const brandHref = brandLink?.getAttribute('href') || resolvePageHref('feed');
+
+  const topbar = document.createElement('div');
+  topbar.className = 'mobile-topbar';
+  topbar.innerHTML = `
+    <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-topbar-avatar-link" aria-label="Open profile">
+      <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="js-navbar-avatar" width="36" height="36" loading="lazy">
+    </a>
+    <a class="mobile-topbar-logo" href="${escapeHtml(brandHref)}" aria-label="Home">
+      ${brandImg ? `<img src="${escapeHtml(brandImg.getAttribute('src') || '')}" alt="Logo" height="30">` : '<span>SocialCore</span>'}
+    </a>
+    <span class="mobile-topbar-spacer" aria-hidden="true"></span>
+  `;
+
+  navbarContainer.appendChild(topbar);
+
+  const bottomNav = document.createElement('nav');
+  bottomNav.className = 'mobile-bottom-nav';
+  bottomNav.setAttribute('aria-label', 'Mobile navigation');
+  bottomNav.innerHTML = [
+    buildMobileNavItem({
+      icon: 'bi-house-door',
+      label: 'Home',
+      href: resolvePageHref('feed'),
+      isActive: currentPage === 'feed.html',
+    }),
+    buildMobileNavItem({
+      icon: 'bi-search',
+      label: 'Search',
+      href: resolvePageHref('feed'),
+      isActive: false,
+      action: 'search',
+    }),
+    buildMobileNavItem({
+      icon: 'bi-bell',
+      label: 'Notifications',
+      href: resolvePageHref('friends'),
+      isActive: currentPage === 'friends.html',
+      action: 'notifications',
+    }),
+    buildMobileNavItem({
+      icon: 'bi-envelope',
+      label: 'Messages',
+      href: resolvePageHref('messages'),
+      isActive: currentPage === 'messages.html',
+    }),
+  ].join('');
+
+  document.body.appendChild(bottomNav);
+
+  const drawerBackdrop = document.createElement('div');
+  drawerBackdrop.className = 'mobile-drawer-backdrop';
+  drawerBackdrop.id = 'mobileDrawerBackdrop';
+  document.body.appendChild(drawerBackdrop);
+
+  const drawer = document.createElement('aside');
+  drawer.className = 'mobile-side-drawer';
+  drawer.id = 'mobileSideDrawer';
+  drawer.setAttribute('aria-hidden', 'true');
+  drawer.innerHTML = `
+    <div class="mobile-drawer-header">
+      <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-drawer-profile-link">
+        <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="js-navbar-avatar" width="44" height="44" loading="lazy">
+      </a>
+      <button type="button" class="btn btn-outline-primary btn-sm" data-action="logout">Logout</button>
+    </div>
+    <nav class="mobile-drawer-nav" aria-label="Side shortcuts">
+      <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-drawer-link">Profile</a>
+      <a href="${escapeHtml(resolvePageHref('photos'))}" class="mobile-drawer-link">Photos</a>
+      <a href="${escapeHtml(resolvePageHref('friends'))}" class="mobile-drawer-link">Friends</a>
+      <a href="#" class="mobile-drawer-link">Saved Posts</a>
+      <a href="#" class="mobile-drawer-link">Groups</a>
+      <a href="#" class="mobile-drawer-link">Events</a>
+    </nav>
+  `;
+
+  document.body.appendChild(drawer);
+
+  initNavbarUserAvatar();
+  initLogoutActions();
+
+  const openDrawer = () => {
+    drawer.classList.add('is-open');
+    drawerBackdrop.classList.add('is-visible');
+    drawer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('mobile-drawer-open');
+  };
+
+  const closeDrawer = () => {
+    drawer.classList.remove('is-open');
+    drawerBackdrop.classList.remove('is-visible');
+    drawer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('mobile-drawer-open');
+  };
+
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  drawer.addEventListener('click', (event) => {
+    const link = event.target.closest('a.mobile-drawer-link, a.mobile-drawer-profile-link');
+    if (link) {
+      closeDrawer();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeDrawer();
+    }
+  });
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchingDrawer = false;
+
+  document.addEventListener('touchstart', (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchingDrawer = Boolean(event.target.closest('.mobile-side-drawer'));
+  }, { passive: true });
+
+  document.addEventListener('touchend', (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+    const isHorizontalGesture = Math.abs(deltaX) > Math.abs(deltaY);
+
+    if (!isHorizontalGesture) return;
+
+    const startsNearLeftEdge = touchStartX <= 24;
+    const swipeRightToOpen = deltaX > 70;
+    const swipeLeftToClose = deltaX < -70;
+
+    if (!drawer.classList.contains('is-open') && startsNearLeftEdge && swipeRightToOpen) {
+      openDrawer();
+      return;
+    }
+
+    if (drawer.classList.contains('is-open') && touchingDrawer && swipeLeftToClose) {
+      closeDrawer();
+    }
+  }, { passive: true });
+
+  bottomNav.addEventListener('click', (event) => {
+    const actionLink = event.target.closest('[data-mobile-action]');
+    if (!actionLink) return;
+
+    const action = actionLink.dataset.mobileAction;
+    if (!action) return;
+
+    if (action === 'search') {
+      if (currentPage === 'feed.html') {
+        event.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    if (action === 'notifications') {
+      if (currentPage === 'friends.html') {
+        event.preventDefault();
+        const requestsTab = document.querySelector('[data-tab="friend-requests"]');
+        requestsTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  });
+}
+
 function resolveRelativeAppLink(type) {
   const inPages = window.location.pathname.includes('/pages/');
 
@@ -322,6 +536,43 @@ async function enforceAuthenticatedSession() {
   const inPages = window.location.pathname.includes('/pages/');
   window.location.href = inPages ? 'login.html' : 'pages/login.html';
   return false;
+}
+
+async function performLogout() {
+  try {
+    const { supabase } = await import('./supabase.js');
+    await supabase.auth.signOut();
+  } catch {
+    // ignore and continue local cleanup
+  }
+
+  try {
+    localStorage.removeItem('socialcore_user');
+  } catch {
+    // ignore
+  }
+
+  const inPages = window.location.pathname.includes('/pages/');
+  window.location.href = inPages ? 'login.html' : 'pages/login.html';
+}
+
+function initLogoutActions() {
+  const explicitLogoutButtons = Array.from(document.querySelectorAll('[data-action="logout"]'));
+  const navbarLogoutLinks = Array.from(
+    document.querySelectorAll('.dropdown-menu .dropdown-item.text-danger[href$="login.html"]')
+  );
+
+  const logoutTargets = [...explicitLogoutButtons, ...navbarLogoutLinks];
+
+  logoutTargets.forEach((element) => {
+    if (element.dataset.logoutBound === 'true') return;
+    element.dataset.logoutBound = 'true';
+
+    element.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await performLogout();
+    });
+  });
 }
 
 export function getStoredUser() {
