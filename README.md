@@ -1,51 +1,125 @@
-# SocialCore 🌐
+# SocialCore
 
-SocialCore е multi-page social network приложение с Vanilla JavaScript, Bootstrap 5, Vite и Supabase.
+SocialCore is a multi-page social networking web app where users can register, create posts, interact with content, build connections, and chat.
 
-![SocialCore Logo](./assets/images/logo.svg)
+## Project Description
 
-## 📌 Какво представлява проектът
+SocialCore provides a classic social platform flow:
 
-Приложението предоставя базови social функции:
-- регистрация и вход със Supabase Auth
-- feed с публикации, лайкове и коментари (вкл. отговори)
-- профили и редакция на профил
-- приятели и friend requests
-- директни съобщения (conversations/messages)
-- административен панел (роли и управление)
+- Public users (guests) can view the landing page and access login/register pages.
+- Authenticated users can:
+  - manage profile data,
+  - create/edit/delete their own posts,
+  - like posts and comments,
+  - write comments and threaded replies,
+  - follow users,
+  - send/accept/decline friend requests,
+  - use direct messaging.
+- Admin users can:
+  - manage platform users through admin tools,
+  - moderate comments,
+  - use protected Supabase Edge Functions for user administration.
 
-## 🧱 Технологичен стек
+## Architecture
 
-- **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES Modules)
-- **UI:** Bootstrap 5 + Bootstrap Icons
-- **Build Tool:** Vite (MPA конфигурация)
-- **Backend:** Supabase (PostgreSQL, Auth, RLS, Storage)
+### Front-end
 
-## 🚀 Стартиране локално
+- **Type:** Multi-Page Application (MPA)
+- **Build tool:** Vite (`vite.config.js` with multiple page entry points)
+- **UI:** Bootstrap 5 + Bootstrap Icons + custom CSS
+- **Client code:** Vanilla JavaScript ES modules in `js/`
+- **Pages:** Separate HTML files in `pages/`, each wired to its own module
 
-### Изисквания
+### Back-end / BaaS
+
+- **Platform:** Supabase
+- **Auth:** Supabase Auth (`auth.users`)
+- **Database:** Supabase Postgres with Row Level Security (RLS)
+- **Server-side logic:**
+  - SQL functions/RPC (e.g. unread counts, direct conversation creation)
+  - Triggers for counters, timestamps, and friendship-follow syncing
+  - Supabase Edge Functions for admin user operations (`create-user`, `list-users`, `edit-user`, `delete-user`)
+
+### Data Access Pattern
+
+- Front-end modules call helper methods from `js/database.js`.
+- `js/supabase.js` initializes the Supabase client using Vite env vars.
+- Security is enforced in Postgres (RLS policies + role checks), not only in UI.
+
+## Database Schema Design
+
+The schema is centered around profiles, content, social graph, moderation roles, and messaging.
+
+### Main Tables
+
+- **Core social:** `profiles`, `posts`, `comments`, `likes`, `follows`
+- **Friendship:** `friend_requests`
+- **Messaging:** `conversations`, `conversation_participants`, `messages`
+- **Access control:** `user_roles`
+
+### ER Diagram (Main Relationships)
+
+```mermaid
+erDiagram
+    AUTH_USERS ||--|| PROFILES : "id"
+
+    PROFILES ||--o{ POSTS : creates
+    PROFILES ||--o{ COMMENTS : writes
+    POSTS ||--o{ COMMENTS : has
+
+    PROFILES ||--o{ LIKES : gives
+    POSTS ||--o{ LIKES : receives
+    COMMENTS ||--o{ LIKES : receives
+
+    PROFILES ||--o{ FOLLOWS : follower_id
+    PROFILES ||--o{ FOLLOWS : following_id
+
+    PROFILES ||--o{ FRIEND_REQUESTS : requester_id
+    PROFILES ||--o{ FRIEND_REQUESTS : addressee_id
+
+    PROFILES ||--o{ CONVERSATION_PARTICIPANTS : joins
+    CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : includes
+    CONVERSATIONS ||--o{ MESSAGES : contains
+    PROFILES ||--o{ MESSAGES : sends
+
+    AUTH_USERS ||--|| USER_ROLES : has
+```
+
+### Notes
+
+- `likes` supports post-like and comment-like behavior (polymorphic via `post_id` or `comment_id`).
+- `comments` supports threaded replies through `parent_comment_id`.
+- `friend_requests` with status `accepted` triggers mutual follow records.
+- `conversations` supports direct messaging and participant-based access.
+- Most content tables use UUID primary keys, timestamps, constraints, indexes, and RLS.
+
+## Local Development Setup Guide
+
+### Prerequisites
+
 - Node.js 18+
 - npm
-- Supabase проект
+- Supabase project (cloud)
+- Optional: Supabase CLI for migration workflow
 
-### 1) Инсталация
+### 1) Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2) Environment променливи
+### 2) Configure environment variables
 
-Създай `.env` в root директорията:
+Create `.env` in project root:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 3) Миграции в Supabase
+### 3) Apply database migrations
 
-Препоръчителен вариант (Supabase CLI):
+**Recommended (CLI):**
 
 ```bash
 npx supabase login
@@ -53,120 +127,49 @@ npx supabase link --project-ref your-project-ref
 npx supabase db push
 ```
 
-Миграциите са в `supabase/migrations/`.
+Migrations are available in both:
 
-Алтернативно можеш да изпълниш SQL файловете ръчно от `database/migrations/`.
+- `supabase/migrations/` (CLI-first workflow)
+- `database/migrations/` (manual SQL workflow reference)
 
-### 4) Dev сървър
+### 4) Run the app locally
 
 ```bash
 npm run dev
 ```
 
-Приложението се отваря на `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-## 📜 NPM скриптове
+### 5) Useful scripts
 
-- `npm run dev` — стартира dev сървър
-- `npm run build` — production build в `dist/`
-- `npm run preview` — локален preview на production build
-
-## 🗂️ Основна структура
-
-```text
-SocialCore/
-├── index.html
-├── pages/                 # MPA страници
-├── js/                    # JS модули по страници + shared helpers
-├── css/                   # глобални и page-specific стилове
-├── assets/                # изображения, видео и други статични ресурси
-├── database/migrations/   # SQL миграции (manual вариант)
-├── supabase/migrations/   # CLI миграции (препоръчително)
-├── supabase/functions/    # Edge Functions
-└── vite.config.js         # MPA входни точки
+```bash
+npm run build
+npm run preview
 ```
 
-## 📄 Налични страници
+## Key Folders and Files
 
-- `/` (landing)
-- `/pages/login.html`
-- `/pages/register.html`
-- `/pages/feed.html`
-- `/pages/messages.html`
-- `/pages/profile.html`
-- `/pages/photos.html`
-- `/pages/friends.html`
-- `/pages/create-post.html`
-- `/pages/edit-profile.html`
-- `/pages/settings.html`
-- `/pages/admin.html`
+| Path | Purpose |
+|---|---|
+| `index.html` | Landing page entry point (public home) |
+| `pages/` | App pages (login, register, feed, profile, friends, messages, admin, etc.) |
+| `js/` | Page modules + shared client logic |
+| `js/main.js` | Shared UI utilities (toasts, helpers, common behavior) |
+| `js/database.js` | Main data access layer (posts, comments, likes, follows, friends, messaging) |
+| `js/supabase.js` | Supabase client initialization from env vars |
+| `css/` | Stylesheets (global and per-page styling) |
+| `assets/` | Static assets (images, video, icons) |
+| `database/migrations/` | SQL migration scripts (reference/manual execution path) |
+| `database/schema-diagram.md` | ASCII schema overview |
+| `supabase/migrations/` | Supabase CLI migration history |
+| `supabase/functions/` | Edge Functions for admin user management |
+| `vite.config.js` | Vite config + multi-page build inputs |
+| `SUPABASE_SETUP.md` | Detailed Supabase setup instructions |
+| `QUICK_START.md` | Short setup/testing flow |
 
-## 🧠 Архитектура (кратко)
+## Technology Summary
 
-- Проектът е **MPA**, конфигуриран във `vite.config.js` чрез `rollupOptions.input`.
-- Всяка страница има собствен JS модул в `js/`.
-- Общи utilities са централизирани в `js/main.js`.
-- Базовият data layer е в `js/database.js` и използва Supabase client от `js/supabase.js`.
-
-## 🗄️ База данни (обзор)
-
-Основни домейни в схемата:
-- профили (`profiles`)
-- публикации (`posts`), коментари (`comments`), лайкове (`likes`)
-- follows и friend requests
-- messaging таблици (conversations/messages + unread counters)
-- user roles за admin функционалност
-
-Подробности:
-- [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
-- [QUICK_START.md](./QUICK_START.md)
-- [database/schema-diagram.md](./database/schema-diagram.md)
-
-## ⚠️ Често срещани проблеми
-
-- Грешка `Missing Supabase environment variables` → провери `.env` файла и имената на ключовете.
-- `Permission denied`/RLS грешки → провери дали всички миграции са приложени.
-- `relation does not exist` → липсва изпълнена миграция.
-
-## 🌍 Deployment
-
-### Netlify
-
-Проектът съдържа готов `netlify.toml`, така че можеш да deploy-неш директно от Git repository.
-
-- **Build command:** `npm ci && ./node_modules/.bin/vite build`
-- **Publish directory:** `dist`
-- **Node version:** `18`
-
-Препоръка: в Netlify Site Settings → Environment Variables задай/override:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-### Vercel
-
-За Vercel използвай стандартни настройки за Vite:
-
-- **Framework preset:** `Vite`
-- **Build command:** `npm run build`
-- **Output directory:** `dist`
-
-В Project Settings → Environment Variables добави:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-След deployment, ако имаш auth callback ограничения, добави production домейна в Supabase:
-- Authentication → URL Configuration → Site URL / Redirect URLs
-
-## ✅ Production Checklist
-
-- [ ] Build минава успешно: `npm run build`
-- [ ] Environment variables са зададени в хостинга (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
-- [ ] Всички Supabase миграции са приложени (`npx supabase db push`)
-- [ ] Supabase Auth URL Configuration съдържа production домейна
-- [ ] RLS политиките са активни и тествани с реален потребител
-- [ ] Основните страници са smoke-tested след deploy (`/`, `login`, `register`, `feed`, `profile`, `messages`)
-
-## 📌 Бележки
-
-- Проектът е в активна разработка.
-- Част от функционалностите зависят от коректно настроен Supabase проект и RLS политики.
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES modules), Bootstrap 5
+- **Build tooling:** Vite
+- **Backend services:** Supabase Auth, Postgres, RLS, Edge Functions
+- **Database language:** SQL (migrations, policies, RPC functions, triggers)
