@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize post actions (like, comment, share)
   initPostActions();
+  initCommentOverlayDismiss();
 
   // Initialize load more functionality
   initLoadMore();
@@ -942,6 +943,42 @@ function initPostActions() {
         handleShare(actionBtn, postId);
         break;
     }
+  });
+}
+
+function initCommentOverlayDismiss() {
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const clickedCommentToggle = target.closest('.post-action-btn[data-action="comment"]');
+    const clickedInsideCommentSection = target.closest('.comment-section');
+    const clickedReplyToggle = target.closest('[data-action="reply-comment"]');
+    const clickedInsideReplyForm = target.closest('.comment-reply-form');
+
+    if (!clickedCommentToggle && !clickedInsideCommentSection) {
+      closeOpenCommentSections();
+      closeOpenReplyForms();
+      return;
+    }
+
+    if (!clickedReplyToggle && !clickedInsideReplyForm) {
+      closeOpenReplyForms();
+    }
+  });
+}
+
+function closeOpenCommentSections() {
+  const sections = document.querySelectorAll('#postsFeed .comment-section:not(.d-none)');
+  sections.forEach((section) => {
+    section.classList.add('d-none');
+  });
+}
+
+function closeOpenReplyForms() {
+  const forms = document.querySelectorAll('#postsFeed .comment-reply-form');
+  forms.forEach((form) => {
+    form.remove();
   });
 }
 
