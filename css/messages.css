@@ -23,3 +23,66 @@
 	box-shadow: none !important;
 }
 
+#messagesNewBtn.btn-outline-primary {
+	color: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	background: transparent !important;
+}
+
+#messagesNewBtn.btn-outline-primary:hover,
+#messagesNewBtn.btn-outline-primary:focus {
+	color: #ffffff !important;
+	border-color: #6a5e56 !important;
+	background: #6a5e56 !important;
+}
+
+#messagesForm .btn.btn-primary {
+	color: #ffffff !important;
+	border-color: #6a5e56 !important;
+	background: #6a5e56 !important;
+}
+
+#messagesForm .btn.btn-primary:hover,
+#messagesForm .btn.btn-primary:focus {
+	color: #ffffff !important;
+	border-color: #6a5e56 !important;
+	background: #6a5e56 !important;
+}
+
+#messagesOpenDrawerBtn.btn-link,
+#messagesOpenDrawerBtn.btn-link i {
+	color: #6a5e56 !important;
+}
+
+#messagesOpenDrawerBtn.btn-link:hover,
+#messagesOpenDrawerBtn.btn-link:focus,
+#messagesOpenDrawerBtn.btn-link:hover i,
+#messagesOpenDrawerBtn.btn-link:focus i {
+	color: #6a5e56 !important;
+	text-decoration: none !important;
+}
+
+#messagesConversationsList .list-group-item-action {
+	color: var(--text-primary) !important;
+	border-color: var(--border-soft) !important;
+}
+
+#messagesConversationsList .list-group-item-action:hover,
+#messagesConversationsList .list-group-item-action:focus {
+	background: var(--bg-soft) !important;
+	color: var(--text-primary) !important;
+}
+
+#messagesConversationsList .list-group-item-action.active,
+#messagesConversationsList .list-group-item-action:active {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#messagesConversationsList .list-group-item-action.active .text-muted,
+#messagesConversationsList .list-group-item-action.active .small,
+#messagesConversationsList .list-group-item-action.active .fw-semibold {
+	color: #ffffff !important;
+}
+
