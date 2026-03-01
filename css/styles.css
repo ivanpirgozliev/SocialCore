@@ -301,4 +301,53 @@ hr,
 	color: var(--text-primary) !important;
 }
 
+.post-link-preview {
+	display: block;
+	text-decoration: none;
+	border: 1px solid var(--border-soft);
+	border-radius: 12px;
+	background: var(--card-bg);
+	overflow: hidden;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.post-link-preview:hover,
+.post-link-preview:focus {
+	text-decoration: none;
+	background: var(--bg-soft);
+	border-color: var(--gray-300);
+}
+
+.post-link-preview-image {
+	display: block;
+	width: 100%;
+	height: auto;
+	max-height: 340px;
+	object-fit: cover;
+	background: var(--bg-main);
+}
+
+.post-link-preview-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	padding: 0.65rem 0.8rem;
+}
+
+.post-link-preview-domain {
+	font-size: 0.78rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--text-secondary);
+}
+
+.post-link-preview-url {
+	font-size: 0.9rem;
+	color: var(--text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 

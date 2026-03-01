@@ -252,6 +252,7 @@ function createFeedPostHtml(post) {
   const profileHref = authorId ? `profile.html?id=${encodeURIComponent(authorId)}` : 'profile.html';
   const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
   const contentHtml = formatPostContentHtml(post?.content || '');
+  const linkPreviewHtml = createPostLinkPreviewHtml(post?.content || '', { hidden: Boolean(post?.image_url) });
   const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
   const postGallery = `feed-post-${String(post?.id || 'unknown')}`;
 
@@ -291,6 +292,7 @@ function createFeedPostHtml(post) {
       <div class="post-content">
         ${contentHtml ? `<p class="mb-0">${contentHtml}</p>` : ''}
         ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}" style="cursor: zoom-in;">` : ''}
+        ${linkPreviewHtml}
       </div>
       <div class="post-actions">
         <button class="post-action-btn ${likeClass}" data-action="like" type="button" aria-label="Like">
@@ -962,6 +964,7 @@ function renderFeedPostContent(postCard, content) {
 
   if (!normalized) {
     if (existingParagraph) existingParagraph.remove();
+    renderFeedPostLinkPreview(postCard, normalized);
     return;
   }
 
@@ -969,6 +972,7 @@ function renderFeedPostContent(postCard, content) {
 
   if (existingParagraph) {
     existingParagraph.innerHTML = html;
+    renderFeedPostLinkPreview(postCard, normalized);
     return;
   }
 
@@ -976,6 +980,7 @@ function renderFeedPostContent(postCard, content) {
   paragraph.className = 'mb-0';
   paragraph.innerHTML = html;
   contentContainer.prepend(paragraph);
+  renderFeedPostLinkPreview(postCard, normalized);
 }
 
 function getFeedPostImageUrl(postCard) {
@@ -995,6 +1000,7 @@ function renderFeedPostImage(postCard, imageUrl) {
 
   if (!normalized) {
     if (existingImage) existingImage.remove();
+    renderFeedPostLinkPreview(postCard, getFeedPostContent(postCard));
     return;
   }
 
@@ -1003,6 +1009,7 @@ function renderFeedPostImage(postCard, imageUrl) {
     existingImage.setAttribute('data-photo-viewer-url', normalized);
     existingImage.setAttribute('data-photo-gallery', gallery);
     existingImage.style.cursor = 'zoom-in';
+    renderFeedPostLinkPreview(postCard, getFeedPostContent(postCard));
     return;
   }
 
@@ -1015,6 +1022,28 @@ function renderFeedPostImage(postCard, imageUrl) {
   imageEl.setAttribute('data-photo-gallery', gallery);
   imageEl.style.cursor = 'zoom-in';
   contentContainer.appendChild(imageEl);
+  renderFeedPostLinkPreview(postCard, getFeedPostContent(postCard));
+}
+
+function renderFeedPostLinkPreview(postCard, content) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const existingPreview = contentContainer.querySelector('.post-link-preview');
+  const hasImage = Boolean(contentContainer.querySelector('.post-image'));
+  const nextPreviewHtml = createPostLinkPreviewHtml(content, { hidden: hasImage });
+
+  if (!nextPreviewHtml) {
+    if (existingPreview) existingPreview.remove();
+    return;
+  }
+
+  if (existingPreview) {
+    existingPreview.outerHTML = nextPreviewHtml;
+    return;
+  }
+
+  contentContainer.insertAdjacentHTML('beforeend', nextPreviewHtml);
 }
 
 function ensureFeedPostEditorModal() {
@@ -2167,6 +2196,48 @@ function formatPostContentHtml(content) {
 
   parts.push(escapeHtml(raw.slice(lastIndex)));
   return parts.join('').replace(/\n/g, '<br>');
+}
+
+function extractFirstExternalUrl(content) {
+  const raw = String(content || '');
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  for (const match of raw.matchAll(urlRegex)) {
+    const candidate = String(match[0] || '').replace(/[),.;!?]+$/g, '');
+    const href = normalizeExternalUrl(candidate);
+    if (href) return href;
+  }
+
+  return null;
+}
+
+function getLinkPreviewImageUrl(url) {
+  return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=1200`;
+}
+
+function createPostLinkPreviewHtml(content, { hidden = false } = {}) {
+  if (hidden) return '';
+
+  const href = extractFirstExternalUrl(content);
+  if (!href) return '';
+
+  let host = href;
+  try {
+    host = new URL(href).hostname.replace(/^www\./, '');
+  } catch {
+    host = href;
+  }
+
+  const imageUrl = getLinkPreviewImageUrl(href);
+  return `
+    <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="post-link-preview mt-3" aria-label="Open link preview">
+      <img src="${escapeHtml(imageUrl)}" alt="Link preview" class="post-link-preview-image" loading="lazy">
+      <div class="post-link-preview-body">
+        <span class="post-link-preview-domain">${escapeHtml(host)}</span>
+        <span class="post-link-preview-url">${escapeHtml(href)}</span>
+      </div>
+    </a>
+  `;
 }
 
 /**

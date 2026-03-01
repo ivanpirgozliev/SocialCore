@@ -1084,6 +1084,7 @@ function createPostCard(post) {
   const postGallery = `post-${String(post?.id || 'unknown')}`;
   const isOwnPost = Boolean(profileView.authUserId && post?.user_id && post.user_id === profileView.authUserId);
   const contentHtml = formatPostContentHtml(post.content || '');
+  const linkPreviewHtml = createPostLinkPreviewHtml(post.content || '', { hidden: Boolean(post?.image_url) });
   
   return `
     <div class="post-card" data-post-id="${post.id}" data-post-author-id="${escapeHtml(String(post?.user_id || ''))}">
@@ -1108,6 +1109,7 @@ function createPostCard(post) {
       <div class="post-content">
         <p>${contentHtml}</p>
         ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}">` : ''}
+        ${linkPreviewHtml}
       </div>
       <div class="post-actions">
         <button class="post-action-btn ${likeClass}" data-action="like">
@@ -1187,6 +1189,48 @@ function formatPostContentHtml(content) {
 
   parts.push(escapeHtml(raw.slice(lastIndex)));
   return parts.join('').replace(/\n/g, '<br>');
+}
+
+function extractFirstExternalUrl(content) {
+  const raw = String(content || '');
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  for (const match of raw.matchAll(urlRegex)) {
+    const candidate = String(match[0] || '').replace(/[),.;!?]+$/g, '');
+    const href = normalizeExternalUrl(candidate);
+    if (href) return href;
+  }
+
+  return null;
+}
+
+function getLinkPreviewImageUrl(url) {
+  return `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=1200`;
+}
+
+function createPostLinkPreviewHtml(content, { hidden = false } = {}) {
+  if (hidden) return '';
+
+  const href = extractFirstExternalUrl(content);
+  if (!href) return '';
+
+  let host = href;
+  try {
+    host = new URL(href).hostname.replace(/^www\./, '');
+  } catch {
+    host = href;
+  }
+
+  const imageUrl = getLinkPreviewImageUrl(href);
+  return `
+    <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="post-link-preview mt-3" aria-label="Open link preview">
+      <img src="${escapeHtml(imageUrl)}" alt="Link preview" class="post-link-preview-image" loading="lazy">
+      <div class="post-link-preview-body">
+        <span class="post-link-preview-domain">${escapeHtml(host)}</span>
+        <span class="post-link-preview-url">${escapeHtml(href)}</span>
+      </div>
+    </a>
+  `;
 }
 
 /**
@@ -1494,18 +1538,21 @@ function renderProfilePostContent(postCard, content) {
 
   if (!normalized) {
     if (existingParagraph) existingParagraph.remove();
+    renderProfilePostLinkPreview(postCard, normalized);
     return;
   }
 
   const html = formatPostContentHtml(normalized);
   if (existingParagraph) {
     existingParagraph.innerHTML = html;
+    renderProfilePostLinkPreview(postCard, normalized);
     return;
   }
 
   const paragraph = document.createElement('p');
   paragraph.innerHTML = html;
   contentContainer.prepend(paragraph);
+  renderProfilePostLinkPreview(postCard, normalized);
 }
 
 function getProfilePostImageUrl(postCard) {
@@ -1525,6 +1572,7 @@ function renderProfilePostImage(postCard, imageUrl) {
 
   if (!normalized) {
     if (existingImage) existingImage.remove();
+    renderProfilePostLinkPreview(postCard, getProfilePostContent(postCard));
     return;
   }
 
@@ -1532,6 +1580,7 @@ function renderProfilePostImage(postCard, imageUrl) {
     existingImage.src = normalized;
     existingImage.setAttribute('data-photo-viewer-url', normalized);
     existingImage.setAttribute('data-photo-gallery', gallery);
+    renderProfilePostLinkPreview(postCard, getProfilePostContent(postCard));
     return;
   }
 
@@ -1542,6 +1591,28 @@ function renderProfilePostImage(postCard, imageUrl) {
   imageEl.setAttribute('data-photo-viewer-url', normalized);
   imageEl.setAttribute('data-photo-gallery', gallery);
   contentContainer.appendChild(imageEl);
+  renderProfilePostLinkPreview(postCard, getProfilePostContent(postCard));
+}
+
+function renderProfilePostLinkPreview(postCard, content) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const existingPreview = contentContainer.querySelector('.post-link-preview');
+  const hasImage = Boolean(contentContainer.querySelector('.post-image'));
+  const nextPreviewHtml = createPostLinkPreviewHtml(content, { hidden: hasImage });
+
+  if (!nextPreviewHtml) {
+    if (existingPreview) existingPreview.remove();
+    return;
+  }
+
+  if (existingPreview) {
+    existingPreview.outerHTML = nextPreviewHtml;
+    return;
+  }
+
+  contentContainer.insertAdjacentHTML('beforeend', nextPreviewHtml);
 }
 
 function ensureProfilePostEditorModal() {
