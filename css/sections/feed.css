@@ -99,7 +99,7 @@
 }
 
 .feed-tabs.nav-pills .nav-link.active {
-  background-color: var(--primary-blue) !important;
+  background-color: var(--text-primary) !important;
   color: white !important;
   border-left-color: transparent !important;
 }
@@ -193,9 +193,9 @@
   padding: 0.35rem;
   justify-content: center;
   gap: 0;
-  border: 1px solid var(--primary-blue);
+  border: 1px solid var(--text-primary);
   border-radius: var(--radius-md);
-  background: var(--primary-blue);
+  background: var(--text-primary);
   color: white;
 }
 
