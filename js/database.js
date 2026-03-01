@@ -196,6 +196,37 @@ export async function deletePost(postId) {
   if (error) throw error;
 }
 
+/**
+ * Update a post
+ * @param {string} postId - Post ID
+ * @param {string|{content:string,image_url?:string|null}} updatesOrContent - Updated post data
+ */
+export async function updatePost(postId, updatesOrContent) {
+  const payload = typeof updatesOrContent === 'string'
+    ? { content: updatesOrContent }
+    : { ...(updatesOrContent || {}) };
+
+  const normalizedContent = String(payload.content ?? '').trim();
+  if (!normalizedContent) {
+    throw new Error('Post content cannot be empty');
+  }
+
+  const updatePayload = {
+    content: normalizedContent,
+  };
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'image_url')) {
+    updatePayload.image_url = payload.image_url || null;
+  }
+
+  const { error } = await supabase
+    .from('posts')
+    .update(updatePayload)
+    .eq('id', postId);
+
+  if (error) throw error;
+}
+
 // ============================================
 // LIKES
 // ============================================

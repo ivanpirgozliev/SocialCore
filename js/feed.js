@@ -5,7 +5,7 @@
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch } from './main.js';
 import { supabase } from './supabase.js';
-import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from './database.js';
+import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
@@ -18,11 +18,22 @@ let commentPermissions = {
   userId: null,
   isAdmin: false,
 };
+let feedCurrentUserId = getStoredUser()?.id || null;
 let feedPhotoViewerState = {
   modalEl: null,
   images: [],
   currentIndex: 0,
   keyHandler: null,
+};
+let feedPostEditorState = {
+  modalEl: null,
+  activePostCard: null,
+  activePostId: null,
+  currentImageUrl: null,
+  selectedFile: null,
+  removeImage: false,
+  isSubmitting: false,
+  previewObjectUrl: null,
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -55,6 +66,7 @@ async function initCommentPermissions() {
   const storedUser = getStoredUser();
   if (storedUser?.id) {
     commentPermissions.userId = storedUser.id;
+    feedCurrentUserId = storedUser.id;
   }
 
   try {
@@ -62,6 +74,7 @@ async function initCommentPermissions() {
     if (!user?.id) return;
 
     commentPermissions.userId = user.id;
+    feedCurrentUserId = user.id;
     commentPermissions.isAdmin = await checkIsAdmin(user.id);
   } catch (error) {
     console.warn('Failed to resolve comment permissions:', error);
@@ -238,7 +251,7 @@ function createFeedPostHtml(post) {
   const authorId = post?.profiles?.id;
   const profileHref = authorId ? `profile.html?id=${encodeURIComponent(authorId)}` : 'profile.html';
   const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
-  const contentHtml = escapeHtml(post?.content || '').replace(/\n/g, '<br>');
+  const contentHtml = formatPostContentHtml(post?.content || '');
   const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
   const postGallery = `feed-post-${String(post?.id || 'unknown')}`;
 
@@ -248,9 +261,10 @@ function createFeedPostHtml(post) {
   const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
   const likeClass = isLiked ? 'liked' : '';
   const commentClass = commentsCount > 0 ? 'has-comments' : '';
+  const isOwnPost = Boolean(feedCurrentUserId && post?.user_id && post.user_id === feedCurrentUserId);
 
   return `
-    <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}">
+    <article class="post-card" data-post-id="${escapeHtml(String(post?.id || ''))}" data-post-author-id="${escapeHtml(String(post?.user_id || ''))}">
       <div class="post-header">
         <a href="${escapeHtml(profileHref)}" class="text-decoration-none">
           <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="post-avatar" loading="lazy">
@@ -264,8 +278,13 @@ function createFeedPostHtml(post) {
             <i class="bi bi-three-dots"></i>
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#"><i class="bi bi-bookmark me-2"></i>Save Post</a></li>
-            <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Report</a></li>
+            <li><button type="button" class="dropdown-item" data-post-menu-action="save"><i class="bi bi-bookmark me-2"></i>Save Post</button></li>
+            <li><button type="button" class="dropdown-item" data-post-menu-action="report"><i class="bi bi-flag me-2"></i>Report</button></li>
+            ${isOwnPost ? `
+              <li><hr class="dropdown-divider"></li>
+              <li><button type="button" class="dropdown-item" data-post-owner-action="edit"><i class="bi bi-pencil-square me-2"></i>Edit Post</button></li>
+              <li><button type="button" class="dropdown-item text-danger" data-post-owner-action="delete"><i class="bi bi-trash3 me-2"></i>Delete Post</button></li>
+            ` : ''}
           </ul>
         </div>
       </div>
@@ -878,6 +897,31 @@ function initPostActions() {
       return;
     }
 
+    const ownerActionBtn = e.target.closest('[data-post-owner-action]');
+    if (ownerActionBtn && postsFeed.contains(ownerActionBtn)) {
+      e.preventDefault();
+
+      const action = ownerActionBtn.dataset.postOwnerAction;
+      const postCard = ownerActionBtn.closest('.post-card');
+      const postId = postCard?.dataset?.postId;
+
+      if (!postCard || !postId) return;
+      if (!isFeedPostOwnedByCurrentUser(postCard)) {
+        showToast('You can only manage your own posts.', 'warning');
+        return;
+      }
+
+      if (action === 'edit') {
+        openFeedPostEditor(postCard, postId);
+      }
+
+      if (action === 'delete') {
+        handleDeleteFeedPost(postCard, postId);
+      }
+
+      return;
+    }
+
     const actionBtn = e.target.closest('.post-action-btn');
     if (!actionBtn) return;
 
@@ -897,6 +941,363 @@ function initPostActions() {
         break;
     }
   });
+}
+
+function isFeedPostOwnedByCurrentUser(postCard) {
+  if (!postCard) return false;
+  const authorId = String(postCard.dataset.postAuthorId || '').trim();
+  return Boolean(feedCurrentUserId && authorId && authorId === feedCurrentUserId);
+}
+
+function getFeedPostContent(postCard) {
+  return postCard?.querySelector('.post-content p')?.textContent || '';
+}
+
+function renderFeedPostContent(postCard, content) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const normalized = String(content ?? '').trim();
+  const existingParagraph = contentContainer.querySelector('p');
+
+  if (!normalized) {
+    if (existingParagraph) existingParagraph.remove();
+    return;
+  }
+
+  const html = formatPostContentHtml(normalized);
+
+  if (existingParagraph) {
+    existingParagraph.innerHTML = html;
+    return;
+  }
+
+  const paragraph = document.createElement('p');
+  paragraph.className = 'mb-0';
+  paragraph.innerHTML = html;
+  contentContainer.prepend(paragraph);
+}
+
+function getFeedPostImageUrl(postCard) {
+  const imageEl = postCard?.querySelector('.post-content .post-image');
+  if (!imageEl) return null;
+  return imageEl.getAttribute('data-photo-viewer-url') || imageEl.getAttribute('src') || null;
+}
+
+function renderFeedPostImage(postCard, imageUrl) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const existingImage = contentContainer.querySelector('.post-image');
+  const normalized = String(imageUrl || '').trim();
+  const postId = String(postCard?.dataset?.postId || 'unknown');
+  const gallery = `feed-post-${postId}`;
+
+  if (!normalized) {
+    if (existingImage) existingImage.remove();
+    return;
+  }
+
+  if (existingImage) {
+    existingImage.src = normalized;
+    existingImage.setAttribute('data-photo-viewer-url', normalized);
+    existingImage.setAttribute('data-photo-gallery', gallery);
+    existingImage.style.cursor = 'zoom-in';
+    return;
+  }
+
+  const imageEl = document.createElement('img');
+  imageEl.src = normalized;
+  imageEl.alt = 'Post image';
+  imageEl.className = 'post-image mt-3';
+  imageEl.loading = 'lazy';
+  imageEl.setAttribute('data-photo-viewer-url', normalized);
+  imageEl.setAttribute('data-photo-gallery', gallery);
+  imageEl.style.cursor = 'zoom-in';
+  contentContainer.appendChild(imageEl);
+}
+
+function ensureFeedPostEditorModal() {
+  if (feedPostEditorState.modalEl) return feedPostEditorState.modalEl;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'feedPostEditorModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Post</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="feedPostEditorContent" class="form-label">Post text</label>
+            <textarea id="feedPostEditorContent" class="form-control" rows="4" maxlength="5000" placeholder="What's on your mind?"></textarea>
+          </div>
+
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="form-label mb-0">Image</span>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="feedPostEditorChangeImageBtn">
+                  <i class="bi bi-image me-1"></i>Change
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="feedPostEditorRemoveImageBtn">
+                  <i class="bi bi-trash3 me-1"></i>Remove
+                </button>
+              </div>
+            </div>
+            <input id="feedPostEditorImageInput" class="d-none" type="file" accept="image/*">
+            <div class="border rounded p-2 text-center bg-light">
+              <img id="feedPostEditorPreview" class="img-fluid rounded d-none" alt="Post image preview" style="max-height: 220px; width: auto;">
+              <p id="feedPostEditorNoImage" class="text-muted mb-0 small">No image</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary-gradient" id="feedPostEditorSaveBtn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  feedPostEditorState.modalEl = modalEl;
+
+  const imageInput = modalEl.querySelector('#feedPostEditorImageInput');
+  const changeBtn = modalEl.querySelector('#feedPostEditorChangeImageBtn');
+  const removeBtn = modalEl.querySelector('#feedPostEditorRemoveImageBtn');
+  const saveBtn = modalEl.querySelector('#feedPostEditorSaveBtn');
+
+  changeBtn?.addEventListener('click', () => {
+    imageInput?.click();
+  });
+
+  imageInput?.addEventListener('change', () => {
+    const file = imageInput.files?.[0] || null;
+    if (!file) return;
+    feedPostEditorState.selectedFile = file;
+    feedPostEditorState.removeImage = false;
+    updateFeedPostEditorPreview();
+  });
+
+  removeBtn?.addEventListener('click', () => {
+    feedPostEditorState.selectedFile = null;
+    feedPostEditorState.removeImage = true;
+    if (imageInput) imageInput.value = '';
+    updateFeedPostEditorPreview();
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    await submitFeedPostEditor();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (feedPostEditorState.previewObjectUrl) {
+      URL.revokeObjectURL(feedPostEditorState.previewObjectUrl);
+      feedPostEditorState.previewObjectUrl = null;
+    }
+    feedPostEditorState.activePostCard = null;
+    feedPostEditorState.activePostId = null;
+    feedPostEditorState.currentImageUrl = null;
+    feedPostEditorState.selectedFile = null;
+    feedPostEditorState.removeImage = false;
+    feedPostEditorState.isSubmitting = false;
+    if (imageInput) imageInput.value = '';
+  });
+
+  return modalEl;
+}
+
+function updateFeedPostEditorPreview() {
+  const modalEl = ensureFeedPostEditorModal();
+  const previewEl = modalEl.querySelector('#feedPostEditorPreview');
+  const noImageEl = modalEl.querySelector('#feedPostEditorNoImage');
+
+  if (!previewEl || !noImageEl) return;
+
+  if (feedPostEditorState.previewObjectUrl) {
+    URL.revokeObjectURL(feedPostEditorState.previewObjectUrl);
+    feedPostEditorState.previewObjectUrl = null;
+  }
+
+  let previewUrl = null;
+  if (feedPostEditorState.selectedFile) {
+    previewUrl = URL.createObjectURL(feedPostEditorState.selectedFile);
+    feedPostEditorState.previewObjectUrl = previewUrl;
+  } else if (!feedPostEditorState.removeImage && feedPostEditorState.currentImageUrl) {
+    previewUrl = feedPostEditorState.currentImageUrl;
+  }
+
+  if (previewUrl) {
+    previewEl.src = previewUrl;
+    previewEl.classList.remove('d-none');
+    noImageEl.classList.add('d-none');
+    return;
+  }
+
+  previewEl.removeAttribute('src');
+  previewEl.classList.add('d-none');
+  noImageEl.classList.remove('d-none');
+}
+
+function openFeedPostEditor(postCard, postId) {
+  const modalEl = ensureFeedPostEditorModal();
+  const contentInput = modalEl.querySelector('#feedPostEditorContent');
+  const saveBtn = modalEl.querySelector('#feedPostEditorSaveBtn');
+
+  feedPostEditorState.activePostCard = postCard;
+  feedPostEditorState.activePostId = postId;
+  feedPostEditorState.currentImageUrl = getFeedPostImageUrl(postCard);
+  feedPostEditorState.selectedFile = null;
+  feedPostEditorState.removeImage = false;
+  feedPostEditorState.isSubmitting = false;
+
+  if (contentInput) {
+    contentInput.value = getFeedPostContent(postCard);
+    contentInput.focus();
+    contentInput.setSelectionRange(contentInput.value.length, contentInput.value.length);
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = 'Save Changes';
+  }
+
+  updateFeedPostEditorPreview();
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+async function submitFeedPostEditor() {
+  if (feedPostEditorState.isSubmitting) return;
+
+  const modalEl = ensureFeedPostEditorModal();
+  const contentInput = modalEl.querySelector('#feedPostEditorContent');
+  const saveBtn = modalEl.querySelector('#feedPostEditorSaveBtn');
+
+  const content = String(contentInput?.value || '').trim();
+  if (!content) {
+    showToast('Post content cannot be empty.', 'warning');
+    contentInput?.focus();
+    return;
+  }
+
+  const postCard = feedPostEditorState.activePostCard;
+  const postId = feedPostEditorState.activePostId;
+  if (!postCard || !postId) return;
+
+  feedPostEditorState.isSubmitting = true;
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+  }
+
+  try {
+    let nextImageUrl = feedPostEditorState.removeImage ? null : feedPostEditorState.currentImageUrl;
+    if (feedPostEditorState.selectedFile) {
+      nextImageUrl = await uploadPostImage(feedPostEditorState.selectedFile);
+    }
+
+    await updatePost(postId, {
+      content,
+      image_url: nextImageUrl,
+    });
+
+    renderFeedPostContent(postCard, content);
+    renderFeedPostImage(postCard, nextImageUrl);
+    showToast('Post updated.', 'success');
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+  } catch (error) {
+    console.error('Error updating post:', error);
+    showToast('Failed to update post.', 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = 'Save Changes';
+    }
+    feedPostEditorState.isSubmitting = false;
+  }
+}
+
+function ensureFeedConfirmModal() {
+  const existing = document.getElementById('feedPostConfirmModal');
+  if (existing) return existing;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'feedPostConfirmModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="feedPostConfirmTitle">Confirm</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="feedPostConfirmMessage"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="feedPostConfirmAcceptBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  return modalEl;
+}
+
+function showFeedConfirmDialog(title, message, confirmLabel = 'Confirm') {
+  const modalEl = ensureFeedConfirmModal();
+  const titleEl = modalEl.querySelector('#feedPostConfirmTitle');
+  const messageEl = modalEl.querySelector('#feedPostConfirmMessage');
+  const acceptBtn = modalEl.querySelector('#feedPostConfirmAcceptBtn');
+
+  if (titleEl) titleEl.textContent = title;
+  if (messageEl) messageEl.textContent = message;
+  if (acceptBtn) acceptBtn.textContent = confirmLabel;
+
+  return new Promise((resolve) => {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    let resolved = false;
+
+    const onHidden = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(false);
+    };
+
+    const onAccept = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(true);
+      modal.hide();
+    };
+
+    modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+    acceptBtn?.addEventListener('click', onAccept, { once: true });
+    modal.show();
+  });
+}
+
+async function handleDeleteFeedPost(postCard, postId) {
+  const confirmed = await showFeedConfirmDialog('Delete post', 'Delete this post? This action cannot be undone.', 'Delete');
+  if (!confirmed) return;
+
+  try {
+    await deletePost(postId);
+    postCard.remove();
+    showToast('Post deleted.', 'success');
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    showToast('Failed to delete post.', 'error');
+  }
 }
 
 function ensureFeedPhotoViewerModal() {
@@ -1721,6 +2122,45 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function normalizeExternalUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function formatPostContentHtml(content) {
+  const raw = String(content || '');
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = [];
+  let lastIndex = 0;
+
+  for (const match of raw.matchAll(urlRegex)) {
+    const index = match.index ?? 0;
+    const urlText = match[0] || '';
+
+    parts.push(escapeHtml(raw.slice(lastIndex, index)));
+
+    const href = normalizeExternalUrl(urlText);
+    if (href) {
+      parts.push(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-decoration-underline">${escapeHtml(urlText)}</a>`);
+    } else {
+      parts.push(escapeHtml(urlText));
+    }
+
+    lastIndex = index + urlText.length;
+  }
+
+  parts.push(escapeHtml(raw.slice(lastIndex)));
+  return parts.join('').replace(/\n/g, '<br>');
 }
 
 /**

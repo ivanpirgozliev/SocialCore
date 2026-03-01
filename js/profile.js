@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, updatePost, deletePost, uploadPostImage, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -25,6 +25,16 @@ let photoViewerState = {
   keyHandler: null,
   touchStartX: null,
   touchStartY: null,
+};
+let profilePostEditorState = {
+  modalEl: null,
+  activePostCard: null,
+  activePostId: null,
+  currentImageUrl: null,
+  selectedFile: null,
+  removeImage: false,
+  isSubmitting: false,
+  previewObjectUrl: null,
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1072,18 +1082,31 @@ function createPostCard(post) {
   const commentsCount = post.comments_count || 0;
   const commentClass = commentsCount > 0 ? 'has-comments' : '';
   const postGallery = `post-${String(post?.id || 'unknown')}`;
+  const isOwnPost = Boolean(profileView.authUserId && post?.user_id && post.user_id === profileView.authUserId);
+  const contentHtml = formatPostContentHtml(post.content || '');
   
   return `
-    <div class="post-card" data-post-id="${post.id}">
+    <div class="post-card" data-post-id="${post.id}" data-post-author-id="${escapeHtml(String(post?.user_id || ''))}">
       <div class="post-header">
         <img src="${post.profiles.avatar_url}" alt="${post.profiles.full_name}" class="post-avatar">
         <div>
           <div class="post-author">${post.profiles.full_name}</div>
           <div class="post-time">${relativeTime}</div>
         </div>
+        ${isOwnPost ? `
+          <div class="ms-auto">
+            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button type="button" class="dropdown-item" data-post-owner-action="edit"><i class="bi bi-pencil-square me-2"></i>Edit Post</button></li>
+              <li><button type="button" class="dropdown-item text-danger" data-post-owner-action="delete"><i class="bi bi-trash3 me-2"></i>Delete Post</button></li>
+            </ul>
+          </div>
+        ` : ''}
       </div>
       <div class="post-content">
-        <p>${escapeHtml(post.content)}</p>
+        <p>${contentHtml}</p>
         ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}">` : ''}
       </div>
       <div class="post-actions">
@@ -1125,6 +1148,45 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function normalizeExternalUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function formatPostContentHtml(content) {
+  const raw = String(content || '');
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = [];
+  let lastIndex = 0;
+
+  for (const match of raw.matchAll(urlRegex)) {
+    const index = match.index ?? 0;
+    const urlText = match[0] || '';
+
+    parts.push(escapeHtml(raw.slice(lastIndex, index)));
+
+    const href = normalizeExternalUrl(urlText);
+    if (href) {
+      parts.push(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-decoration-underline">${escapeHtml(urlText)}</a>`);
+    } else {
+      parts.push(escapeHtml(urlText));
+    }
+
+    lastIndex = index + urlText.length;
+  }
+
+  parts.push(escapeHtml(raw.slice(lastIndex)));
+  return parts.join('').replace(/\n/g, '<br>');
 }
 
 /**
@@ -1375,6 +1437,20 @@ function initPostActions() {
   profilePosts.forEach((postCard) => {
     const postId = postCard.dataset.postId;
 
+    const ownerEditBtn = postCard.querySelector('[data-post-owner-action="edit"]');
+    if (ownerEditBtn) {
+      ownerEditBtn.addEventListener('click', () => {
+        handleEditProfilePost(postCard, postId);
+      });
+    }
+
+    const ownerDeleteBtn = postCard.querySelector('[data-post-owner-action="delete"]');
+    if (ownerDeleteBtn) {
+      ownerDeleteBtn.addEventListener('click', () => {
+        handleDeleteProfilePost(postCard, postId);
+      });
+    }
+
     // Like button
     const likeBtn = postCard.querySelector('[data-action="like"]');
     if (likeBtn) {
@@ -1397,6 +1473,373 @@ function initPostActions() {
       });
     }
   });
+}
+
+function isProfilePostOwnedByCurrentUser(postCard) {
+  if (!postCard) return false;
+  const authorId = String(postCard.dataset.postAuthorId || '').trim();
+  return Boolean(profileView.authUserId && authorId && authorId === profileView.authUserId);
+}
+
+function getProfilePostContent(postCard) {
+  return postCard?.querySelector('.post-content p')?.textContent || '';
+}
+
+function renderProfilePostContent(postCard, content) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const normalized = String(content ?? '').trim();
+  const existingParagraph = contentContainer.querySelector('p');
+
+  if (!normalized) {
+    if (existingParagraph) existingParagraph.remove();
+    return;
+  }
+
+  const html = formatPostContentHtml(normalized);
+  if (existingParagraph) {
+    existingParagraph.innerHTML = html;
+    return;
+  }
+
+  const paragraph = document.createElement('p');
+  paragraph.innerHTML = html;
+  contentContainer.prepend(paragraph);
+}
+
+function getProfilePostImageUrl(postCard) {
+  const imageEl = postCard?.querySelector('.post-content .post-image');
+  if (!imageEl) return null;
+  return imageEl.getAttribute('data-photo-viewer-url') || imageEl.getAttribute('src') || null;
+}
+
+function renderProfilePostImage(postCard, imageUrl) {
+  const contentContainer = postCard?.querySelector('.post-content');
+  if (!contentContainer) return;
+
+  const existingImage = contentContainer.querySelector('.post-image');
+  const normalized = String(imageUrl || '').trim();
+  const postId = String(postCard?.dataset?.postId || 'unknown');
+  const gallery = `post-${postId}`;
+
+  if (!normalized) {
+    if (existingImage) existingImage.remove();
+    return;
+  }
+
+  if (existingImage) {
+    existingImage.src = normalized;
+    existingImage.setAttribute('data-photo-viewer-url', normalized);
+    existingImage.setAttribute('data-photo-gallery', gallery);
+    return;
+  }
+
+  const imageEl = document.createElement('img');
+  imageEl.src = normalized;
+  imageEl.alt = 'Post image';
+  imageEl.className = 'post-image';
+  imageEl.setAttribute('data-photo-viewer-url', normalized);
+  imageEl.setAttribute('data-photo-gallery', gallery);
+  contentContainer.appendChild(imageEl);
+}
+
+function ensureProfilePostEditorModal() {
+  if (profilePostEditorState.modalEl) return profilePostEditorState.modalEl;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'profilePostEditorModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Post</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="profilePostEditorContent" class="form-label">Post text</label>
+            <textarea id="profilePostEditorContent" class="form-control" rows="4" maxlength="5000" placeholder="What's on your mind?"></textarea>
+          </div>
+
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="form-label mb-0">Image</span>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="profilePostEditorChangeImageBtn">
+                  <i class="bi bi-image me-1"></i>Change
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="profilePostEditorRemoveImageBtn">
+                  <i class="bi bi-trash3 me-1"></i>Remove
+                </button>
+              </div>
+            </div>
+            <input id="profilePostEditorImageInput" class="d-none" type="file" accept="image/*">
+            <div class="border rounded p-2 text-center bg-light">
+              <img id="profilePostEditorPreview" class="img-fluid rounded d-none" alt="Post image preview" style="max-height: 220px; width: auto;">
+              <p id="profilePostEditorNoImage" class="text-muted mb-0 small">No image</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary-gradient" id="profilePostEditorSaveBtn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  profilePostEditorState.modalEl = modalEl;
+
+  const imageInput = modalEl.querySelector('#profilePostEditorImageInput');
+  const changeBtn = modalEl.querySelector('#profilePostEditorChangeImageBtn');
+  const removeBtn = modalEl.querySelector('#profilePostEditorRemoveImageBtn');
+  const saveBtn = modalEl.querySelector('#profilePostEditorSaveBtn');
+
+  changeBtn?.addEventListener('click', () => {
+    imageInput?.click();
+  });
+
+  imageInput?.addEventListener('change', () => {
+    const file = imageInput.files?.[0] || null;
+    if (!file) return;
+    profilePostEditorState.selectedFile = file;
+    profilePostEditorState.removeImage = false;
+    updateProfilePostEditorPreview();
+  });
+
+  removeBtn?.addEventListener('click', () => {
+    profilePostEditorState.selectedFile = null;
+    profilePostEditorState.removeImage = true;
+    if (imageInput) imageInput.value = '';
+    updateProfilePostEditorPreview();
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    await submitProfilePostEditor();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (profilePostEditorState.previewObjectUrl) {
+      URL.revokeObjectURL(profilePostEditorState.previewObjectUrl);
+      profilePostEditorState.previewObjectUrl = null;
+    }
+
+    profilePostEditorState.activePostCard = null;
+    profilePostEditorState.activePostId = null;
+    profilePostEditorState.currentImageUrl = null;
+    profilePostEditorState.selectedFile = null;
+    profilePostEditorState.removeImage = false;
+    profilePostEditorState.isSubmitting = false;
+    if (imageInput) imageInput.value = '';
+  });
+
+  return modalEl;
+}
+
+function updateProfilePostEditorPreview() {
+  const modalEl = ensureProfilePostEditorModal();
+  const previewEl = modalEl.querySelector('#profilePostEditorPreview');
+  const noImageEl = modalEl.querySelector('#profilePostEditorNoImage');
+
+  if (!previewEl || !noImageEl) return;
+
+  if (profilePostEditorState.previewObjectUrl) {
+    URL.revokeObjectURL(profilePostEditorState.previewObjectUrl);
+    profilePostEditorState.previewObjectUrl = null;
+  }
+
+  let previewUrl = null;
+  if (profilePostEditorState.selectedFile) {
+    previewUrl = URL.createObjectURL(profilePostEditorState.selectedFile);
+    profilePostEditorState.previewObjectUrl = previewUrl;
+  } else if (!profilePostEditorState.removeImage && profilePostEditorState.currentImageUrl) {
+    previewUrl = profilePostEditorState.currentImageUrl;
+  }
+
+  if (previewUrl) {
+    previewEl.src = previewUrl;
+    previewEl.classList.remove('d-none');
+    noImageEl.classList.add('d-none');
+    return;
+  }
+
+  previewEl.removeAttribute('src');
+  previewEl.classList.add('d-none');
+  noImageEl.classList.remove('d-none');
+}
+
+function openProfilePostEditor(postCard, postId) {
+  const modalEl = ensureProfilePostEditorModal();
+  const contentInput = modalEl.querySelector('#profilePostEditorContent');
+  const saveBtn = modalEl.querySelector('#profilePostEditorSaveBtn');
+
+  profilePostEditorState.activePostCard = postCard;
+  profilePostEditorState.activePostId = postId;
+  profilePostEditorState.currentImageUrl = getProfilePostImageUrl(postCard);
+  profilePostEditorState.selectedFile = null;
+  profilePostEditorState.removeImage = false;
+  profilePostEditorState.isSubmitting = false;
+
+  if (contentInput) {
+    contentInput.value = getProfilePostContent(postCard);
+    contentInput.focus();
+    contentInput.setSelectionRange(contentInput.value.length, contentInput.value.length);
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = 'Save Changes';
+  }
+
+  updateProfilePostEditorPreview();
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+async function submitProfilePostEditor() {
+  if (profilePostEditorState.isSubmitting) return;
+
+  const modalEl = ensureProfilePostEditorModal();
+  const contentInput = modalEl.querySelector('#profilePostEditorContent');
+  const saveBtn = modalEl.querySelector('#profilePostEditorSaveBtn');
+
+  const content = String(contentInput?.value || '').trim();
+  if (!content) {
+    showToast('Post content cannot be empty.', 'warning');
+    contentInput?.focus();
+    return;
+  }
+
+  const postCard = profilePostEditorState.activePostCard;
+  const postId = profilePostEditorState.activePostId;
+  if (!postCard || !postId) return;
+
+  profilePostEditorState.isSubmitting = true;
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+  }
+
+  try {
+    let nextImageUrl = profilePostEditorState.removeImage ? null : profilePostEditorState.currentImageUrl;
+    if (profilePostEditorState.selectedFile) {
+      nextImageUrl = await uploadPostImage(profilePostEditorState.selectedFile);
+    }
+
+    await updatePost(postId, {
+      content,
+      image_url: nextImageUrl,
+    });
+
+    renderProfilePostContent(postCard, content);
+    renderProfilePostImage(postCard, nextImageUrl);
+    showToast('Post updated.', 'success');
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+  } catch (error) {
+    console.error('Error updating post:', error);
+    showToast('Failed to update post.', 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = 'Save Changes';
+    }
+    profilePostEditorState.isSubmitting = false;
+  }
+}
+
+function ensureProfileConfirmModal() {
+  const existing = document.getElementById('profilePostConfirmModal');
+  if (existing) return existing;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'profilePostConfirmModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="profilePostConfirmTitle">Confirm</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="profilePostConfirmMessage"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="profilePostConfirmAcceptBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  return modalEl;
+}
+
+function showProfileConfirmDialog(title, message, confirmLabel = 'Confirm') {
+  const modalEl = ensureProfileConfirmModal();
+  const titleEl = modalEl.querySelector('#profilePostConfirmTitle');
+  const messageEl = modalEl.querySelector('#profilePostConfirmMessage');
+  const acceptBtn = modalEl.querySelector('#profilePostConfirmAcceptBtn');
+
+  if (titleEl) titleEl.textContent = title;
+  if (messageEl) messageEl.textContent = message;
+  if (acceptBtn) acceptBtn.textContent = confirmLabel;
+
+  return new Promise((resolve) => {
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    let resolved = false;
+
+    const onHidden = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(false);
+    };
+
+    const onAccept = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(true);
+      modal.hide();
+    };
+
+    modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+    acceptBtn?.addEventListener('click', onAccept, { once: true });
+    modal.show();
+  });
+}
+
+async function handleEditProfilePost(postCard, postId) {
+  if (!isProfilePostOwnedByCurrentUser(postCard)) {
+    showToast('You can only manage your own posts.', 'warning');
+    return;
+  }
+
+  openProfilePostEditor(postCard, postId);
+}
+
+async function handleDeleteProfilePost(postCard, postId) {
+  if (!isProfilePostOwnedByCurrentUser(postCard)) {
+    showToast('You can only manage your own posts.', 'warning');
+    return;
+  }
+
+  const confirmed = await showProfileConfirmDialog('Delete post', 'Delete this post? This action cannot be undone.', 'Delete');
+  if (!confirmed) return;
+
+  try {
+    await deletePost(postId);
+    await Promise.all([refreshProfilePosts(), refreshProfileStats()]);
+    showToast('Post deleted.', 'success');
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    showToast('Failed to delete post.', 'error');
+  }
 }
 
 /**

@@ -183,18 +183,23 @@ textarea.form-control:focus {
 }
 
 a,
-.dropdown-item,
 .nav-link,
 .btn-link {
 	color: var(--brand-primary);
 }
 
+.dropdown-item {
+	color: var(--text-primary);
+	border-radius: var(--radius-sm);  /* good practice for dropdown items */
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 .dropdown-menu {
 	background-color: var(--card-bg) !important;
+	padding: 0.5rem; /* some padding so the border-radius looks nice */
 }
 
 a:hover,
-.dropdown-item:hover,
 .nav-link:hover,
 .btn-link:hover {
 	color: var(--brand-primary-hover);
@@ -202,10 +207,17 @@ a:hover,
 	text-underline-offset: 2px;
 }
 
+.dropdown-item:hover,
+.dropdown-item:focus {
+	color: var(--text-primary);
+	background-color: var(--bg-soft); /* matches user-search-result-item hover */
+	text-decoration: none;
+}
+
 .dropdown-item.active,
 .dropdown-item:active,
 .nav-link.active {
-	background-color: var(--bg-soft);
+	background-color: var(--bg-soft); /* Darkest state */
 	color: var(--text-primary);
 }
 
