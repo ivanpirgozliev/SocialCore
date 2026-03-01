@@ -8,3 +8,36 @@
 @import url('./sections/social-login.css');
 @import url('./styles.css');
 
+.page-with-video .auth-card {
+	opacity: 0.9 !important;
+	backdrop-filter: blur(8px) !important;
+	background: rgba(255, 255, 255, 0.4) !important;
+}
+
+#loginForm .btn.btn-primary-gradient {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#loginForm .btn.btn-primary-gradient:hover,
+#loginForm .btn.btn-primary-gradient:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#rememberMe.form-check-input {
+	border-color: #6a5e56 !important;
+}
+
+#rememberMe.form-check-input:checked {
+	background-color: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+}
+
+#rememberMe.form-check-input:focus {
+	border-color: #6a5e56 !important;
+	box-shadow: 0 0 0 0.2rem rgba(106, 94, 86, 0.2) !important;
+}
+
