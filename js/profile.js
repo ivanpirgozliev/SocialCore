@@ -1071,6 +1071,7 @@ function createPostCard(post) {
   const likeClass = isLiked ? 'liked' : '';
   const commentsCount = post.comments_count || 0;
   const commentClass = commentsCount > 0 ? 'has-comments' : '';
+  const postGallery = `post-${String(post?.id || 'unknown')}`;
   
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -1083,7 +1084,7 @@ function createPostCard(post) {
       </div>
       <div class="post-content">
         <p>${escapeHtml(post.content)}</p>
-        ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="profile-media">` : ''}
+        ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}">` : ''}
       </div>
       <div class="post-actions">
         <button class="post-action-btn ${likeClass}" data-action="like">

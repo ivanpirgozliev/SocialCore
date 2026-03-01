@@ -33,18 +33,11 @@ async function resolveTargetUserId(authUserId) {
 }
 
 async function initPhotosPage() {
-  const uploadForm = document.getElementById('uploadPhotosForm');
   const photosInput = document.getElementById('photosInput');
   const uploadBtn = document.getElementById('uploadPhotosBtn');
-  const clearBtn = document.getElementById('clearPhotosBtn');
-  const filesSummary = document.getElementById('photosFilesSummary');
-  const filesList = document.getElementById('photosFilesList');
-  const previewGrid = document.getElementById('photosPreviewGrid');
-  const dropzone = document.querySelector('.upload-dropzone');
   const refreshBtn = document.getElementById('refreshPhotosBtn');
 
   const backToProfileLink = document.getElementById('photosBackToProfileLink');
-  const uploadCard = document.getElementById('photosUploadCard');
   const galleryTitle = document.getElementById('photosGalleryTitle');
 
   const authUser = await requireUser();
@@ -65,61 +58,19 @@ async function initPhotosPage() {
     backToProfileLink.href = `profile.html?id=${encodeURIComponent(targetUserId)}`;
   }
 
-  if (uploadCard) uploadCard.classList.toggle('d-none', !isOwnPhotos);
+  if (uploadBtn) uploadBtn.classList.toggle('d-none', !isOwnPhotos);
   if (galleryTitle && !isOwnPhotos) {
     galleryTitle.innerHTML = '<i class="bi bi-images me-2 text-primary-blue"></i>Photos';
   }
 
-  if (photosInput && isOwnPhotos) {
-    photosInput.addEventListener('change', () => {
-      renderSelectedFiles(photosInput.files, filesSummary, filesList, previewGrid);
-    });
-  }
-
-  if (dropzone && photosInput && isOwnPhotos) {
-    ;['dragenter', 'dragover'].forEach((eventName) => {
-      dropzone.addEventListener(eventName, (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        dropzone.classList.add('is-dragover');
-      });
+  if (photosInput && uploadBtn && isOwnPhotos) {
+    uploadBtn.addEventListener('click', () => {
+      photosInput.click();
     });
 
-    ;['dragleave', 'drop'].forEach((eventName) => {
-      dropzone.addEventListener(eventName, (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        dropzone.classList.remove('is-dragover');
-      });
-    });
-
-    dropzone.addEventListener('drop', (event) => {
-      const droppedFiles = Array.from(event.dataTransfer?.files || []);
-      if (!droppedFiles.length) return;
-
-      const dataTransfer = new DataTransfer();
-      droppedFiles.forEach((file) => dataTransfer.items.add(file));
-      photosInput.files = dataTransfer.files;
-      renderSelectedFiles(photosInput.files, filesSummary, filesList, previewGrid);
-    });
-  }
-
-  if (clearBtn && photosInput) {
-    clearBtn.addEventListener('click', () => {
-      photosInput.value = '';
-      renderSelectedFiles([], filesSummary, filesList, previewGrid);
-    });
-  }
-
-  if (uploadForm && photosInput && uploadBtn && isOwnPhotos) {
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
+    photosInput.addEventListener('change', async () => {
       const files = Array.from(photosInput.files || []);
-      if (!files.length) {
-        showToast('Please select at least one image.', 'warning');
-        return;
-      }
+      if (!files.length) return;
 
       const originalBtnHtml = uploadBtn.innerHTML;
       uploadBtn.disabled = true;
@@ -129,8 +80,7 @@ async function initPhotosPage() {
         const uploadedCount = await uploadImages(authUser.id, files);
         showToast(`Uploaded ${uploadedCount} photo${uploadedCount === 1 ? '' : 's'}!`, 'success');
         photosInput.value = '';
-        renderSelectedFiles([], filesSummary, filesList, previewGrid);
-        await loadPhotos(authUser.id);
+        await loadPhotos(targetUserId);
       } catch (err) {
         showToast(err?.message || 'Upload failed. Please try again.', 'error');
       } finally {

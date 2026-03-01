@@ -18,6 +18,12 @@ let commentPermissions = {
   userId: null,
   isAdmin: false,
 };
+let feedPhotoViewerState = {
+  modalEl: null,
+  images: [],
+  currentIndex: 0,
+  keyHandler: null,
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   initFeedTabs();
@@ -234,6 +240,7 @@ function createFeedPostHtml(post) {
   const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
   const contentHtml = escapeHtml(post?.content || '').replace(/\n/g, '<br>');
   const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
+  const postGallery = `feed-post-${String(post?.id || 'unknown')}`;
 
   const likesCount = Number.isFinite(post?.likes_count) ? post.likes_count : 0;
   const commentsCount = Number.isFinite(post?.comments_count) ? post.comments_count : 0;
@@ -264,7 +271,7 @@ function createFeedPostHtml(post) {
       </div>
       <div class="post-content">
         ${contentHtml ? `<p class="mb-0">${contentHtml}</p>` : ''}
-        ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy">` : ''}
+        ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}" style="cursor: zoom-in;">` : ''}
       </div>
       <div class="post-actions">
         <button class="post-action-btn ${likeClass}" data-action="like" type="button" aria-label="Like">
@@ -864,6 +871,13 @@ function initPostActions() {
 
   // Event delegation for post actions
   postsFeed.addEventListener('click', (e) => {
+    const imageTrigger = e.target.closest('[data-photo-viewer-url]');
+    if (imageTrigger && postsFeed.contains(imageTrigger)) {
+      e.preventDefault();
+      openFeedPhotoViewerFromTrigger(imageTrigger);
+      return;
+    }
+
     const actionBtn = e.target.closest('.post-action-btn');
     if (!actionBtn) return;
 
@@ -883,6 +897,146 @@ function initPostActions() {
         break;
     }
   });
+}
+
+function ensureFeedPhotoViewerModal() {
+  if (feedPhotoViewerState.modalEl) return feedPhotoViewerState.modalEl;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'feedPhotoViewerModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-dark border-0">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title text-white">Photo Viewer</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <div class="position-relative d-flex justify-content-center align-items-center">
+            <button type="button" class="btn btn-light position-absolute start-0 top-50 translate-middle-y ms-2" data-action="prev-photo" aria-label="Previous photo">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <img src="" alt="Post photo" class="img-fluid rounded" id="feedPhotoViewerImage" loading="lazy" style="max-height: 75vh; width: auto;">
+            <button type="button" class="btn btn-light position-absolute end-0 top-50 translate-middle-y me-2" data-action="next-photo" aria-label="Next photo">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+          <div class="text-center text-white-50 small mt-3" id="feedPhotoViewerCounter"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  feedPhotoViewerState.modalEl = modalEl;
+
+  modalEl.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-action]');
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.action;
+    if (action === 'prev-photo') {
+      showPreviousFeedPhoto();
+    }
+    if (action === 'next-photo') {
+      showNextFeedPhoto();
+    }
+  });
+
+  modalEl.addEventListener('shown.bs.modal', () => {
+    feedPhotoViewerState.keyHandler = (event) => {
+      if (event.key === 'ArrowLeft') showPreviousFeedPhoto();
+      if (event.key === 'ArrowRight') showNextFeedPhoto();
+    };
+    document.addEventListener('keydown', feedPhotoViewerState.keyHandler);
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (feedPhotoViewerState.keyHandler) {
+      document.removeEventListener('keydown', feedPhotoViewerState.keyHandler);
+      feedPhotoViewerState.keyHandler = null;
+    }
+  });
+
+  return modalEl;
+}
+
+function updateFeedPhotoViewerImage() {
+  const modalEl = ensureFeedPhotoViewerModal();
+  const imageEl = modalEl.querySelector('#feedPhotoViewerImage');
+  const counterEl = modalEl.querySelector('#feedPhotoViewerCounter');
+  const prevBtn = modalEl.querySelector('[data-action="prev-photo"]');
+  const nextBtn = modalEl.querySelector('[data-action="next-photo"]');
+
+  if (!imageEl) return;
+  if (!feedPhotoViewerState.images.length) return;
+
+  const total = feedPhotoViewerState.images.length;
+  const normalizedIndex = ((feedPhotoViewerState.currentIndex % total) + total) % total;
+  feedPhotoViewerState.currentIndex = normalizedIndex;
+
+  imageEl.src = feedPhotoViewerState.images[normalizedIndex];
+  if (counterEl) counterEl.textContent = `${normalizedIndex + 1} / ${total}`;
+
+  const shouldShowArrows = total > 1;
+  if (prevBtn) prevBtn.classList.toggle('d-none', !shouldShowArrows);
+  if (nextBtn) nextBtn.classList.toggle('d-none', !shouldShowArrows);
+}
+
+function showPreviousFeedPhoto() {
+  if (!feedPhotoViewerState.images.length) return;
+  feedPhotoViewerState.currentIndex -= 1;
+  updateFeedPhotoViewerImage();
+}
+
+function showNextFeedPhoto() {
+  if (!feedPhotoViewerState.images.length) return;
+  feedPhotoViewerState.currentIndex += 1;
+  updateFeedPhotoViewerImage();
+}
+
+function openFeedPhotoViewer(images, startIndex = 0) {
+  const validImages = (images || []).filter((url) => typeof url === 'string' && url.trim());
+  if (!validImages.length) return;
+
+  feedPhotoViewerState.images = validImages;
+  feedPhotoViewerState.currentIndex = Math.max(0, startIndex);
+
+  const modalEl = ensureFeedPhotoViewerModal();
+  updateFeedPhotoViewerImage();
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+}
+
+function openFeedPhotoViewerFromTrigger(trigger) {
+  if (!trigger) return;
+
+  const imageUrl = trigger.getAttribute('data-photo-viewer-url');
+  if (!imageUrl) return;
+
+  const galleryName = trigger.getAttribute('data-photo-gallery');
+  const postCard = trigger.closest('.post-card');
+
+  let galleryTriggers = [trigger];
+  if (galleryName && postCard) {
+    galleryTriggers = Array.from(postCard.querySelectorAll(`[data-photo-viewer-url][data-photo-gallery="${CSS.escape(galleryName)}"]`));
+  }
+
+  const galleryImages = galleryTriggers
+    .map((item) => item.getAttribute('data-photo-viewer-url'))
+    .filter((url) => typeof url === 'string' && url.trim());
+
+  if (!galleryImages.length) {
+    openFeedPhotoViewer([imageUrl], 0);
+    return;
+  }
+
+  const clickedIndex = galleryTriggers.indexOf(trigger);
+  openFeedPhotoViewer(galleryImages, clickedIndex >= 0 ? clickedIndex : 0);
 }
 
 /**
