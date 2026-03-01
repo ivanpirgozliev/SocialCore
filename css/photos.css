@@ -21,3 +21,36 @@
 	display: block;
 }
 
+/* Upload Button Styles (matches "Add Friend") */
+#uploadPhotosBtn {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#uploadPhotosBtn:hover,
+#uploadPhotosBtn:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+/* Back to Profile & Refresh Buttons (matches "View Profile") */
+#photosBackToProfileLink,
+#refreshPhotosBtn {
+	border-color: #6a5e56 !important;
+	color: #6a5e56 !important;
+	background: transparent !important;
+}
+
+#photosBackToProfileLink:hover,
+#photosBackToProfileLink:focus,
+#refreshPhotosBtn:hover,
+#refreshPhotosBtn:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+	text-decoration: none !important;
+}
+
+
