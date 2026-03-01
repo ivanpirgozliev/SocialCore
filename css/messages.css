@@ -86,3 +86,12 @@
 	color: #ffffff !important;
 }
 
+#messagesThread .messaging-bubble--mine {
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#messagesThread .messaging-bubble--mine .small {
+	color: #ffffff !important;
+}
+
