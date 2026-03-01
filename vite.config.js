@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: './',
   base: './',
+  appType: 'mpa',
   publicDir: 'assets',
   build: {
     outDir: 'dist',

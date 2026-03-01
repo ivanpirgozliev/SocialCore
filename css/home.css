@@ -7,3 +7,61 @@
 @import url('./sections/cta.css');
 @import url('./styles.css');
 
+.homepage-with-video .hero-section,
+.homepage-with-video #features,
+.homepage-with-video .cta-section {
+	position: relative;
+	z-index: 10;
+}
+
+.btn-primary-gradient {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.btn-primary-gradient:hover,
+.btn-primary-gradient:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.btn-outline-primary {
+	color: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.hero-image-card .btn-outline-light {
+	color: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+}
+
+.hero-image-card .btn-outline-light:hover,
+.hero-image-card .btn-outline-light:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.btn-cta {
+	color: #6a5e56 !important;
+}
+
+.text-gradient {
+	background: transparent !important;
+	color: #6a5e56 !important;
+	-webkit-text-fill-color: #6a5e56 !important;
+}
+
+.feature-icon {
+	background: #6a5e56 !important;
+}
+
