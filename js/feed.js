@@ -1043,8 +1043,8 @@ function ensureFeedPostEditorModal() {
             <div class="d-flex align-items-center justify-content-between mb-2">
               <span class="form-label mb-0">Image</span>
               <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary btn-sm" id="feedPostEditorChangeImageBtn">
-                  <i class="bi bi-image me-1"></i>Change
+                <button type="button" class="btn btn-outline-theme btn-sm" id="feedPostEditorChangeImageBtn">
+                  <i class="bi bi-image me-1"></i><span>Add Photo</span>
                 </button>
                 <button type="button" class="btn btn-outline-danger btn-sm" id="feedPostEditorRemoveImageBtn">
                   <i class="bi bi-trash3 me-1"></i>Remove
@@ -1060,7 +1060,7 @@ function ensureFeedPostEditorModal() {
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary-gradient" id="feedPostEditorSaveBtn">Save Changes</button>
+          <button type="button" class="btn btn-theme" id="feedPostEditorSaveBtn">Save Changes</button>
         </div>
       </div>
     </div>
@@ -1118,6 +1118,8 @@ function updateFeedPostEditorPreview() {
   const modalEl = ensureFeedPostEditorModal();
   const previewEl = modalEl.querySelector('#feedPostEditorPreview');
   const noImageEl = modalEl.querySelector('#feedPostEditorNoImage');
+  const changeBtnLabel = modalEl.querySelector('#feedPostEditorChangeImageBtn span');
+  const removeBtn = modalEl.querySelector('#feedPostEditorRemoveImageBtn');
 
   if (!previewEl || !noImageEl) return;
 
@@ -1138,12 +1140,16 @@ function updateFeedPostEditorPreview() {
     previewEl.src = previewUrl;
     previewEl.classList.remove('d-none');
     noImageEl.classList.add('d-none');
+    if (changeBtnLabel) changeBtnLabel.textContent = 'Change';
+    if (removeBtn) removeBtn.disabled = false;
     return;
   }
 
   previewEl.removeAttribute('src');
   previewEl.classList.add('d-none');
   noImageEl.classList.remove('d-none');
+  if (changeBtnLabel) changeBtnLabel.textContent = 'Add Photo';
+  if (removeBtn) removeBtn.disabled = true;
 }
 
 function openFeedPostEditor(postCard, postId) {

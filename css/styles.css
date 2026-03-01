@@ -153,6 +153,32 @@ small,
 	border-color: var(--brand-primary);
 }
 
+/* Theme specific button colors for Modals & Specific UI */
+.btn-theme {
+	background-color: var(--text-primary) !important;
+	border-color: var(--text-primary) !important;
+	color: #ffffff !important;
+}
+
+.btn-theme:hover,
+.btn-theme:focus {
+	background-color: var(--gray-600) !important; 
+	border-color: var(--gray-600) !important;
+	color: #ffffff !important;
+}
+
+.btn-outline-theme {
+	color: var(--text-primary) !important;
+	border-color: var(--text-primary) !important;
+	background-color: transparent !important;
+}
+
+.btn-outline-theme:hover,
+.btn-outline-theme:focus {
+	background-color: var(--text-primary) !important;
+	color: #ffffff !important;
+}
+
 .form-control,
 .form-select,
 .input-group-text,
@@ -190,13 +216,11 @@ a,
 
 .dropdown-item {
 	color: var(--text-primary);
-	border-radius: var(--radius-sm);  /* good practice for dropdown items */
 	transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .dropdown-menu {
 	background-color: var(--card-bg) !important;
-	padding: 0.5rem; /* some padding so the border-radius looks nice */
 }
 
 a:hover,

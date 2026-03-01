@@ -1570,8 +1570,8 @@ function ensureProfilePostEditorModal() {
             <div class="d-flex align-items-center justify-content-between mb-2">
               <span class="form-label mb-0">Image</span>
               <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary btn-sm" id="profilePostEditorChangeImageBtn">
-                  <i class="bi bi-image me-1"></i>Change
+                <button type="button" class="btn btn-outline-theme btn-sm" id="profilePostEditorChangeImageBtn">
+                  <i class="bi bi-image me-1"></i><span>Add Photo</span>
                 </button>
                 <button type="button" class="btn btn-outline-danger btn-sm" id="profilePostEditorRemoveImageBtn">
                   <i class="bi bi-trash3 me-1"></i>Remove
@@ -1587,7 +1587,7 @@ function ensureProfilePostEditorModal() {
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary-gradient" id="profilePostEditorSaveBtn">Save Changes</button>
+          <button type="button" class="btn btn-theme" id="profilePostEditorSaveBtn">Save Changes</button>
         </div>
       </div>
     </div>
@@ -1646,6 +1646,8 @@ function updateProfilePostEditorPreview() {
   const modalEl = ensureProfilePostEditorModal();
   const previewEl = modalEl.querySelector('#profilePostEditorPreview');
   const noImageEl = modalEl.querySelector('#profilePostEditorNoImage');
+  const changeBtnLabel = modalEl.querySelector('#profilePostEditorChangeImageBtn span');
+  const removeBtn = modalEl.querySelector('#profilePostEditorRemoveImageBtn');
 
   if (!previewEl || !noImageEl) return;
 
@@ -1666,12 +1668,16 @@ function updateProfilePostEditorPreview() {
     previewEl.src = previewUrl;
     previewEl.classList.remove('d-none');
     noImageEl.classList.add('d-none');
+    if (changeBtnLabel) changeBtnLabel.textContent = 'Change';
+    if (removeBtn) removeBtn.disabled = false;
     return;
   }
 
   previewEl.removeAttribute('src');
   previewEl.classList.add('d-none');
   noImageEl.classList.remove('d-none');
+  if (changeBtnLabel) changeBtnLabel.textContent = 'Add Photo';
+  if (removeBtn) removeBtn.disabled = true;
 }
 
 function openProfilePostEditor(postCard, postId) {
