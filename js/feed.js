@@ -319,7 +319,7 @@ function buildEmptyStateHtml({ title = 'No posts yet', description = 'Start foll
         <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
         <h5 class="text-muted">${escapeHtml(title)}</h5>
         <p class="text-gray-500 mb-3">${escapeHtml(description)}</p>
-        <a href="create-post.html" class="btn btn-primary-gradient">
+        <a href="create-post.html" class="btn btn-primary-gradient create-post-match-add-friend">
           <i class="bi bi-plus-circle me-2"></i>Create Post
         </a>
       </div>

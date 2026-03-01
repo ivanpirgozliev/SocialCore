@@ -1050,7 +1050,7 @@ function updatePostsUI(posts, { isOwnProfile } = {}) {
         <i class="bi bi-inbox fs-1 text-muted"></i>
         <p class="text-muted mt-3">No posts yet.</p>
         ${own ? `
-          <a href="create-post.html" class="btn btn-primary-gradient mt-3">
+          <a href="create-post.html" class="btn btn-primary-gradient create-post-match-add-friend mt-3">
             <i class="bi bi-plus-circle me-2"></i>Create Post
           </a>
         ` : ''}

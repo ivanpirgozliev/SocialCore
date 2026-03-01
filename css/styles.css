@@ -153,6 +153,19 @@ small,
 	border-color: var(--brand-primary);
 }
 
+.create-post-match-add-friend {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.create-post-match-add-friend:hover,
+.create-post-match-add-friend:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
 /* Theme specific button colors for Modals & Specific UI */
 .btn-theme {
 	background-color: var(--text-primary) !important;
