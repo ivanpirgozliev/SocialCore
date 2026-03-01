@@ -6,3 +6,82 @@
 @import url('./sections/enhancements.css');
 @import url('./styles.css');
 
+.sidebar-profile-btn.btn-outline-primary {
+	border-color: #6a5e56;
+	color: #6a5e56;
+	text-decoration: none;
+}
+
+.sidebar-profile-btn.btn-outline-primary:hover,
+.sidebar-profile-btn.btn-outline-primary:focus {
+	background: #6a5e56;
+	border-color: #6a5e56;
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.feed-tabs .nav-link[data-feed-tab="for-you"] {
+	border: 2px solid #6a5e56 !important;
+	color: #6a5e56 !important;
+	background: transparent !important;
+	text-decoration: none;
+}
+
+.feed-tabs.nav-pills .nav-link[data-feed-tab="for-you"].active {
+	border: 2px solid #6a5e56 !important;
+	color: #6a5e56 !important;
+	background: transparent !important;
+}
+
+.feed-tabs .nav-link[data-feed-tab="for-you"]:hover,
+.feed-tabs .nav-link[data-feed-tab="for-you"]:focus,
+.feed-tabs .nav-link[data-feed-tab="for-you"].active:hover,
+.feed-tabs .nav-link[data-feed-tab="for-you"].active:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+	text-decoration: none;
+}
+
+.feed-tabs .nav-link[data-feed-tab="following"] {
+	border: 2px solid transparent;
+}
+
+.feed-tabs .nav-link[data-feed-tab="following"]:hover,
+.feed-tabs .nav-link[data-feed-tab="following"]:focus {
+	border-color: #6a5e56 !important;
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+	text-decoration: none !important;
+}
+
+#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"] {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"]:hover,
+#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"]:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#peopleYouMayKnowList + .scroll-hint {
+	background: transparent !important;
+}
+
+#loadMoreBtn.btn-outline-primary {
+	border-color: #6a5e56 !important;
+	color: #6a5e56 !important;
+	background: transparent !important;
+}
+
+#loadMoreBtn.btn-outline-primary:hover,
+#loadMoreBtn.btn-outline-primary:focus {
+	border-color: #6a5e56 !important;
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
