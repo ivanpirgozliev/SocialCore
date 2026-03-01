@@ -1179,7 +1179,11 @@ function formatPostContentHtml(content) {
 
     const href = normalizeExternalUrl(urlText);
     if (href) {
-      parts.push(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-decoration-underline">${escapeHtml(urlText)}</a>`);
+      let displayText = urlText.replace(/^https?:\/\/(www\.)?/, '');
+      if (displayText.length > 40) {
+        displayText = displayText.substring(0, 38) + '...';
+      }
+      parts.push(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-primary fw-medium" title="${escapeHtml(urlText)}">${escapeHtml(displayText)}</a>`);
     } else {
       parts.push(escapeHtml(urlText));
     }
