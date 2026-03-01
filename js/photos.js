@@ -10,6 +10,15 @@ import { getProfileIdByUsername } from './database.js';
 const BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
 
+const photosViewerState = {
+  modalEl: null,
+  imageEl: null,
+  counterEl: null,
+  triggers: [],
+  currentIndex: 0,
+  keyHandler: null,
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   initPhotosPage();
 });
@@ -39,6 +48,7 @@ async function initPhotosPage() {
 
   const backToProfileLink = document.getElementById('photosBackToProfileLink');
   const galleryTitle = document.getElementById('photosGalleryTitle');
+  initPhotosViewer();
 
   const authUser = await requireUser();
   if (!authUser) return;
@@ -97,6 +107,121 @@ async function initPhotosPage() {
   }
 
   await loadPhotos(targetUserId);
+}
+
+function ensurePhotosViewerModal() {
+  if (photosViewerState.modalEl) return photosViewerState.modalEl;
+
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade';
+  modalEl.id = 'photosViewerModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered" style="max-width: min(1100px, 95vw); width: 95vw;">
+      <div class="modal-content bg-dark border-0 text-white rounded-3 overflow-hidden" style="height: 720px; max-height: 85vh;">
+        <div class="modal-body p-0 position-relative bg-dark h-100">
+          <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" data-bs-dismiss="modal" aria-label="Close"></button>
+
+          <button type="button" class="btn btn-dark position-absolute top-50 start-0 translate-middle-y ms-3 px-3" data-action="prev" aria-label="Previous photo" style="z-index: 10;">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+
+          <img src="" alt="Photo" class="d-block" id="photosViewerImage" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; background: #000;">
+
+          <button type="button" class="btn btn-dark position-absolute top-50 end-0 translate-middle-y me-3 px-3" data-action="next" aria-label="Next photo" style="z-index: 10;">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+
+          <div class="position-absolute bottom-0 start-50 translate-middle-x mb-2 px-2 py-1 rounded bg-dark bg-opacity-75 text-white-50 small" id="photosViewerCounter"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+
+  photosViewerState.modalEl = modalEl;
+  photosViewerState.imageEl = modalEl.querySelector('#photosViewerImage');
+  photosViewerState.counterEl = modalEl.querySelector('#photosViewerCounter');
+
+  modalEl.addEventListener('click', (event) => {
+    const action = event.target.closest('[data-action]')?.getAttribute('data-action');
+    if (!action) return;
+    if (action === 'prev') {
+      event.preventDefault();
+      navigatePhotosViewer(-1);
+      return;
+    }
+    if (action === 'next') {
+      event.preventDefault();
+      navigatePhotosViewer(1);
+    }
+  });
+
+  modalEl.addEventListener('shown.bs.modal', () => {
+    photosViewerState.keyHandler = (event) => {
+      if (event.key === 'ArrowLeft') navigatePhotosViewer(-1);
+      if (event.key === 'ArrowRight') navigatePhotosViewer(1);
+    };
+    document.addEventListener('keydown', photosViewerState.keyHandler);
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (photosViewerState.keyHandler) {
+      document.removeEventListener('keydown', photosViewerState.keyHandler);
+      photosViewerState.keyHandler = null;
+    }
+  });
+
+  return modalEl;
+}
+
+function updatePhotosViewer() {
+  if (!photosViewerState.imageEl || !photosViewerState.triggers.length) return;
+
+  const trigger = photosViewerState.triggers[photosViewerState.currentIndex];
+  const url = trigger?.getAttribute('data-photo-viewer-url') || '';
+
+  photosViewerState.imageEl.src = url;
+  photosViewerState.counterEl.textContent = `${photosViewerState.currentIndex + 1} / ${photosViewerState.triggers.length}`;
+}
+
+function navigatePhotosViewer(direction) {
+  if (!photosViewerState.triggers.length) return;
+
+  const total = photosViewerState.triggers.length;
+  photosViewerState.currentIndex = (photosViewerState.currentIndex + direction + total) % total;
+  updatePhotosViewer();
+}
+
+function openPhotosViewer(trigger) {
+  const allTriggers = Array.from(document.querySelectorAll('[data-photo-viewer-url][data-photo-gallery="user-photos"]'));
+  if (!allTriggers.length) return;
+
+  const clickedIndex = allTriggers.indexOf(trigger);
+  photosViewerState.triggers = allTriggers;
+  photosViewerState.currentIndex = clickedIndex >= 0 ? clickedIndex : 0;
+
+  updatePhotosViewer();
+
+  const modalEl = ensurePhotosViewerModal();
+  const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl);
+  modal?.show();
+}
+
+function initPhotosViewer() {
+  ensurePhotosViewerModal();
+
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-photo-viewer-url]');
+    if (!trigger) return;
+    if (!trigger.closest('#photosGrid')) return;
+
+    event.preventDefault();
+    openPhotosViewer(trigger);
+  });
 }
 
 function renderSelectedFiles(fileList, summaryEl, listEl, previewEl) {
@@ -276,7 +401,7 @@ async function loadPhotos(userId) {
 
       return `
         <div class="col-6 col-md-4 col-lg-3">
-          <a href="${publicUrl}" target="_blank" rel="noreferrer" class="photos-grid-tile d-block text-decoration-none">
+          <a href="${publicUrl}" class="photos-grid-tile d-block text-decoration-none" data-photo-viewer-url="${publicUrl}" data-photo-gallery="user-photos">
             <img src="${publicUrl}" alt="Photo" class="photos-grid-image" loading="lazy">
           </a>
         </div>
