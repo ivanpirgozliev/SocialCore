@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize profile actions
   initProfileActions();
+  initCommentOverlayDismiss();
 
   // Initialize tab navigation
   initTabNavigation();
@@ -1520,6 +1521,42 @@ function initPostActions() {
         copyToClipboard(window.location.href);
       });
     }
+  });
+}
+
+function initCommentOverlayDismiss() {
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const clickedCommentToggle = target.closest('.post-action-btn[data-action="comment"]');
+    const clickedInsideCommentSection = target.closest('.comment-section');
+    const clickedReplyToggle = target.closest('[data-action="reply-comment"]');
+    const clickedInsideReplyForm = target.closest('.comment-reply-form');
+
+    if (!clickedCommentToggle && !clickedInsideCommentSection) {
+      closeOpenProfileCommentSections();
+      closeOpenProfileReplyForms();
+      return;
+    }
+
+    if (!clickedReplyToggle && !clickedInsideReplyForm) {
+      closeOpenProfileReplyForms();
+    }
+  });
+}
+
+function closeOpenProfileCommentSections() {
+  const sections = document.querySelectorAll('#postsContent .comment-section:not(.d-none)');
+  sections.forEach((section) => {
+    section.classList.add('d-none');
+  });
+}
+
+function closeOpenProfileReplyForms() {
+  const forms = document.querySelectorAll('#postsContent .comment-reply-form');
+  forms.forEach((form) => {
+    form.remove();
   });
 }
 
