@@ -5,3 +5,72 @@
 @import url('./sections/enhancements.css');
 @import url('./styles.css');
 
+.sidebar-card .nav-link[data-tab] {
+	color: #6a5e56 !important;
+	border-radius: 8px;
+	text-decoration: none;
+}
+
+.sidebar-card .nav-link[data-tab]:hover,
+.sidebar-card .nav-link[data-tab]:focus,
+.sidebar-card .nav-link[data-tab].active {
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+	text-decoration: none;
+}
+
+.sidebar-card .nav-link[data-tab]:hover i,
+.sidebar-card .nav-link[data-tab]:focus i,
+.sidebar-card .nav-link[data-tab].active i {
+	color: #ffffff !important;
+}
+
+.friends-menu-badge {
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#suggestions-list .add-friend-btn[data-state="none"] {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+#suggestions-list .add-friend-btn[data-state="none"]:hover,
+#suggestions-list .add-friend-btn[data-state="none"]:focus {
+	background: #6a5e56 !important;
+	border-color: #6a5e56 !important;
+	color: #ffffff !important;
+}
+
+.friends-view-profile-btn.btn-outline-primary {
+	border-color: #6a5e56;
+	color: #6a5e56;
+	text-decoration: none;
+}
+
+.friends-view-profile-btn.btn-outline-primary:hover,
+.friends-view-profile-btn.btn-outline-primary:focus {
+	background: #6a5e56;
+	border-color: #6a5e56;
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.friends-header-search {
+	width: 100%;
+}
+
+.friends-header-search .input-group-text,
+.friends-header-search .form-control {
+	background-color: #ffffff !important;
+}
+
+.friends-header-search .input-group:hover .input-group-text,
+.friends-header-search .input-group:hover .form-control,
+.friends-header-search .input-group:focus-within .input-group-text,
+.friends-header-search .input-group:focus-within .form-control {
+	border-color: var(--gray-300) !important;
+	box-shadow: none !important;
+}
+

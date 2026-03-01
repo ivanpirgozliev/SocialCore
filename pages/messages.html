@@ -105,10 +105,12 @@
         <div class="col-lg-4">
           <div class="card">
             <div class="card-header bg-white">
-              <div class="input-group">
-                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="messagesSearch" placeholder="Search conversations" autocomplete="off">
-              </div>
+              <form class="d-flex messages-list-search" role="search">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                  <input type="text" class="form-control border-start-0" id="messagesSearch" placeholder="Search conversations" aria-label="Search conversations" autocomplete="off">
+                </div>
+              </form>
             </div>
             <div class="list-group list-group-flush" id="messagesConversationsList">
               <div class="p-3 text-muted small">Loading...</div>

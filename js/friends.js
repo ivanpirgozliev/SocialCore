@@ -386,7 +386,7 @@ function createFriendCard(person, type) {
   if (type === 'friend') {
     actionButtons = `
       <div class="friend-card-actions">
-        <a class="btn btn-outline-primary btn-sm w-100" href="${escapeHtml(profileHref)}">
+        <a class="btn btn-outline-primary btn-sm w-100 friends-view-profile-btn" href="${escapeHtml(profileHref)}">
           <i class="bi bi-person me-1"></i>View Profile
         </a>
         <button class="btn btn-outline-danger btn-sm w-100 unfriend-btn" data-id="${escapeHtml(String(person?.id || ''))}" data-name="${escapeHtml(fullName)}">
@@ -397,7 +397,7 @@ function createFriendCard(person, type) {
   } else if (type === 'request') {
     const timeAgo = person?.requested_at ? formatRelativeTime(person.requested_at) : '';
     actionButtons = `
-      <a class="btn btn-outline-primary btn-sm w-100 mb-2" href="${escapeHtml(profileHref)}">
+      <a class="btn btn-outline-primary btn-sm w-100 mb-2 friends-view-profile-btn" href="${escapeHtml(profileHref)}">
         <i class="bi bi-person me-1"></i>View Profile
       </a>
       <small class="text-muted d-block mb-2">${escapeHtml(timeAgo)}</small>
@@ -411,7 +411,7 @@ function createFriendCard(person, type) {
   } else if (type === 'outgoing') {
     const timeAgo = person?.requested_at ? formatRelativeTime(person.requested_at) : '';
     actionButtons = `
-      <a class="btn btn-outline-primary btn-sm w-100 mb-2" href="${escapeHtml(profileHref)}">
+      <a class="btn btn-outline-primary btn-sm w-100 mb-2 friends-view-profile-btn" href="${escapeHtml(profileHref)}">
         <i class="bi bi-person me-1"></i>View Profile
       </a>
       <small class="text-muted d-block mb-2"><i class="bi bi-clock me-1"></i>${escapeHtml(timeAgo || 'Request sent')}</small>
@@ -693,7 +693,7 @@ function setRequestBadge(count) {
       return;
     }
     const badge = document.createElement('span');
-    badge.className = 'badge bg-danger ms-2';
+    badge.className = 'badge friends-menu-badge ms-2';
     badge.textContent = count;
     link.appendChild(badge);
   } else if (existingBadge) {
@@ -712,7 +712,7 @@ function setSentRequestBadge(count) {
       return;
     }
     const badge = document.createElement('span');
-    badge.className = 'badge bg-primary ms-2';
+    badge.className = 'badge friends-menu-badge ms-2';
     badge.textContent = count;
     link.appendChild(badge);
   } else if (existingBadge) {

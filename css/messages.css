@@ -6,3 +6,20 @@
 @import url('./sections/enhancements.css');
 @import url('./styles.css');
 
+.messages-list-search {
+	width: 100%;
+}
+
+.messages-list-search .input-group-text,
+.messages-list-search .form-control {
+	background-color: #ffffff !important;
+}
+
+.messages-list-search .input-group:hover .input-group-text,
+.messages-list-search .input-group:hover .form-control,
+.messages-list-search .input-group:focus-within .input-group-text,
+.messages-list-search .input-group:focus-within .form-control {
+	border-color: var(--gray-300) !important;
+	box-shadow: none !important;
+}
+
