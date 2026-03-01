@@ -4,3 +4,26 @@
 @import url('./sections/enhancements.css');
 @import url('./styles.css');
 
+#settingsTabs .nav-link {
+	color: #6a5e56 !important;
+	border-left: none !important;
+	box-shadow: none !important;
+}
+
+#settingsTabs .nav-link:hover,
+#settingsTabs .nav-link:focus {
+	background: var(--bg-soft) !important;
+	color: var(--text-primary) !important;
+	border-left: none !important;
+	box-shadow: none !important;
+}
+
+#settingsTabs .nav-link.active,
+#settingsTabs .nav-link.active:hover,
+#settingsTabs .nav-link.active:focus {
+	background: #6a5e56 !important;
+	color: #ffffff !important;
+	border-left: none !important;
+	box-shadow: none !important;
+}
+
