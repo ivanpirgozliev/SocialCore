@@ -672,7 +672,7 @@ hr,
 	z-index: 21;
 }
 
-.reaction-control:hover .reaction-breakdown,
+.reaction-control.is-open .reaction-breakdown,
 .reaction-control:focus-within .reaction-breakdown {
 	display: block;
 }
@@ -723,7 +723,7 @@ hr,
 	color: var(--text-secondary);
 }
 
-.reaction-control:hover .reaction-picker,
+.reaction-control.is-open .reaction-picker,
 .reaction-control:focus-within .reaction-picker {
 	display: inline-flex;
 }

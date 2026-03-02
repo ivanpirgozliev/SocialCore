@@ -107,6 +107,21 @@ function buildReactionControlHtml({ targetType, targetId, count = 0, userReactio
   `;
 }
 
+function closeProfileReactionPopovers(scope = document) {
+  scope.querySelectorAll('.reaction-control.is-open').forEach((control) => {
+    control.classList.remove('is-open');
+  });
+}
+
+function toggleProfileReactionPopover(control) {
+  if (!control) return;
+  const shouldOpen = !control.classList.contains('is-open');
+  closeProfileReactionPopovers(document);
+  if (shouldOpen) {
+    control.classList.add('is-open');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserProfile();
 
@@ -1556,6 +1571,14 @@ function copyToClipboard(text) {
  */
 function initPostActions() {
   const profilePosts = document.querySelectorAll('.post-card');
+
+  if (document.body.dataset.profileReactionPopoverBound !== 'true') {
+    document.body.dataset.profileReactionPopoverBound = 'true';
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.reaction-control')) return;
+      closeProfileReactionPopovers(document);
+    });
+  }
   
   profilePosts.forEach((postCard) => {
     const postId = postCard.dataset.postId;
@@ -1576,7 +1599,7 @@ function initPostActions() {
 
     const reactionBtn = postCard.querySelector('[data-action="react-post"]');
     if (reactionBtn) {
-      reactionBtn.addEventListener('click', () => handlePostReactionToggle(reactionBtn, postId));
+      reactionBtn.addEventListener('click', () => toggleProfileReactionPopover(reactionBtn.closest('.reaction-control')));
     }
 
     postCard.querySelectorAll('[data-action="set-post-reaction"]').forEach((optionBtn) => {
@@ -1584,7 +1607,7 @@ function initPostActions() {
         event.preventDefault();
         const reactionType = optionBtn.dataset.reactionType;
         if (!reactionType) return;
-        handlePostReactionSelect(postCard, postId, reactionType);
+        handlePostReactionSelect(postCard, postId, reactionType, optionBtn.closest('.reaction-control'));
       });
     });
 
@@ -2066,28 +2089,7 @@ function updateProfilePostReactionControl(postCard, reactionState) {
   }
 }
 
-async function handlePostReactionToggle(button, postId) {
-  if (!button || !postId) return;
-
-  const currentReaction = String(button.dataset.userReaction || '').trim();
-
-  try {
-    if (currentReaction) {
-      await clearPostReaction(postId);
-    } else {
-      await setPostReaction(postId, 'like');
-    }
-
-    const reactionState = await getPostReactionState(postId);
-    const postCard = button.closest('.post-card');
-    updateProfilePostReactionControl(postCard, reactionState);
-  } catch (error) {
-    console.error('Error updating post reaction:', error);
-    showToast('Failed to update reaction.', 'error');
-  }
-}
-
-async function handlePostReactionSelect(postCard, postId, reactionType) {
+async function handlePostReactionSelect(postCard, postId, reactionType, reactionControl = null) {
   if (!postId || !reactionType) return;
 
   const reactionBtn = postCard?.querySelector('.post-action-btn[data-action="react-post"]');
@@ -2102,6 +2104,7 @@ async function handlePostReactionSelect(postCard, postId, reactionType) {
 
     const reactionState = await getPostReactionState(postId);
     updateProfilePostReactionControl(postCard, reactionState);
+    if (reactionControl) reactionControl.classList.remove('is-open');
   } catch (error) {
     console.error('Error setting post reaction:', error);
     showToast('Failed to update reaction.', 'error');
@@ -2182,13 +2185,13 @@ function handleComment(button, postId) {
     const commentId = actionBtn.dataset.commentId;
 
     if (action === 'react-comment' && commentId) {
-      handleCommentReactionToggle(actionBtn, commentId);
+      toggleProfileReactionPopover(actionBtn.closest('.reaction-control'));
     }
 
     if (action === 'set-comment-reaction' && commentId) {
       const reactionType = actionBtn.dataset.reactionType;
       if (reactionType) {
-        handleCommentReactionSelect(commentSection, commentId, reactionType);
+        handleCommentReactionSelect(commentSection, commentId, reactionType, actionBtn.closest('.reaction-control'));
       }
     }
 
@@ -2402,28 +2405,7 @@ function updateProfileCommentReactionControl(commentSection, commentId, reaction
   }
 }
 
-async function handleCommentReactionToggle(button, commentId) {
-  if (!button || !commentId) return;
-
-  const currentReaction = String(button.dataset.userReaction || '').trim();
-  const commentSection = button.closest('.comment-section');
-
-  try {
-    if (currentReaction) {
-      await clearCommentReaction(commentId);
-    } else {
-      await setCommentReaction(commentId, 'like');
-    }
-
-    const reactionState = await getCommentReactionState(commentId);
-    updateProfileCommentReactionControl(commentSection, commentId, reactionState);
-  } catch (error) {
-    console.error('Error updating comment reaction:', error);
-    showToast('Failed to update reaction.', 'error');
-  }
-}
-
-async function handleCommentReactionSelect(commentSection, commentId, reactionType) {
+async function handleCommentReactionSelect(commentSection, commentId, reactionType, reactionControl = null) {
   if (!commentId || !reactionType) return;
 
   const reactionBtn = commentSection?.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(commentId))}"] .comment-action-btn[data-action="react-comment"]`);
@@ -2438,6 +2420,7 @@ async function handleCommentReactionSelect(commentSection, commentId, reactionTy
 
     const reactionState = await getCommentReactionState(commentId);
     updateProfileCommentReactionControl(commentSection, commentId, reactionState);
+    if (reactionControl) reactionControl.classList.remove('is-open');
   } catch (error) {
     console.error('Error setting comment reaction:', error);
     showToast('Failed to update reaction.', 'error');
