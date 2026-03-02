@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function initAppAfterAuth() {
-  initNavbarBrandLink();
+async function initAppAfterAuth() {
+  await initNavbarBrandLink();
   initLogoutActions();
 
   // Initialize Bootstrap tooltips
