@@ -262,8 +262,11 @@ export function initUserSearch() {
 }
 
 function isPublicPage() {
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-  return new Set(['index.html', 'login.html', 'register.html']).has(currentPage);
+  const rawPath = window.location.pathname || '';
+  const normalizedPath = rawPath.replace(/\/+$/, '');
+  const currentSegment = (normalizedPath.split('/').pop() || 'index').toLowerCase();
+  const currentPage = currentSegment.replace(/\.html$/, '');
+  return new Set(['index', 'login', 'register']).has(currentPage);
 }
 
 function resolvePageHref(pageName) {
