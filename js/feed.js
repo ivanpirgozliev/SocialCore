@@ -5,7 +5,7 @@
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
-import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
+import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
 
 const FEED_PAGE_SIZE = 10;
 const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
@@ -35,6 +35,76 @@ let feedPostEditorState = {
   isSubmitting: false,
   previewObjectUrl: null,
 };
+
+const REACTION_OPTIONS = [
+  { type: 'like', emoji: '👍', label: 'Like' },
+  { type: 'love', emoji: '❤️', label: 'Love' },
+  { type: 'haha', emoji: '😂', label: 'Haha' },
+  { type: 'wow', emoji: '😮', label: 'Wow' },
+  { type: 'sad', emoji: '😢', label: 'Sad' },
+  { type: 'angry', emoji: '😡', label: 'Angry' },
+];
+
+function getReactionMeta(reactionType) {
+  return REACTION_OPTIONS.find((option) => option.type === reactionType) || REACTION_OPTIONS[0];
+}
+
+function buildReactionPickerHtml({ targetType, targetId }) {
+  return `
+    <div class="reaction-picker" role="menu" aria-label="Choose reaction">
+      ${REACTION_OPTIONS.map((option) => `
+        <button
+          type="button"
+          class="reaction-option"
+          data-action="set-${targetType}-reaction"
+          data-${targetType}-id="${escapeHtml(String(targetId || ''))}"
+          data-reaction-type="${escapeHtml(option.type)}"
+          title="${escapeHtml(option.label)}"
+          aria-label="${escapeHtml(option.label)}"
+        >${option.emoji}</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function buildReactionBreakdownHtml({ reactionCounts = {}, reactors = [] }) {
+  const counts = REACTION_OPTIONS
+    .map((option) => ({
+      ...option,
+      count: Number(reactionCounts?.[option.type]) || 0,
+    }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const summaryHtml = counts.length
+    ? `<div class="reaction-breakdown-summary">${counts.map((entry) => `<span class="reaction-breakdown-chip" title="${escapeHtml(entry.label)}">${entry.emoji} ${entry.count}</span>`).join('')}</div>`
+    : '<div class="reaction-breakdown-empty">No reactions yet</div>';
+
+  const reactorsHtml = (reactors || []).length
+    ? `<div class="reaction-breakdown-reactors">${reactors.slice(0, 8).map((reactor) => `<div class="reaction-breakdown-row"><span class="reaction-breakdown-emoji">${escapeHtml(String(reactor.reaction_emoji || '👍'))}</span><span>${escapeHtml(String(reactor.name || 'User'))}</span></div>`).join('')}</div>`
+    : '';
+
+  return `${summaryHtml}${reactorsHtml}`;
+}
+
+function buildReactionControlHtml({ targetType, targetId, count = 0, userReaction = null, tooltip = 'No reactions yet', reactionCounts = {}, reactors = [], baseClass = 'post-action-btn' }) {
+  const reaction = getReactionMeta(userReaction || 'like');
+  const activeClass = userReaction ? 'liked' : '';
+  const breakdownHtml = buildReactionBreakdownHtml({ reactionCounts, reactors });
+
+  return `
+    <div class="reaction-control">
+      <button class="${baseClass} ${activeClass}" data-action="react-${targetType}" data-${targetType}-id="${escapeHtml(String(targetId || ''))}" data-user-reaction="${escapeHtml(String(userReaction || ''))}" title="${escapeHtml(tooltip)}" type="button" aria-label="React">
+        <span class="reaction-emoji" aria-hidden="true">${reaction.emoji}</span>
+        <span>${Math.max(0, Number(count) || 0)}</span>
+      </button>
+      <div class="reaction-breakdown" role="tooltip">
+        ${breakdownHtml}
+      </div>
+      ${buildReactionPickerHtml({ targetType, targetId })}
+    </div>
+  `;
+}
 let feedRealtimeCleanup = null;
 let feedRelationshipsRefreshTimer = null;
 
@@ -354,9 +424,6 @@ function createFeedPostHtml(post) {
 
   const likesCount = Number.isFinite(post?.likes_count) ? post.likes_count : 0;
   const commentsCount = Number.isFinite(post?.comments_count) ? post.comments_count : 0;
-  const isLiked = !!post?.liked_by_user;
-  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
-  const likeClass = isLiked ? 'liked' : '';
   const commentClass = commentsCount > 0 ? 'has-comments' : '';
   const isOwnPost = Boolean(feedCurrentUserId && post?.user_id && post.user_id === feedCurrentUserId);
 
@@ -391,10 +458,16 @@ function createFeedPostHtml(post) {
         ${linkPreviewHtml}
       </div>
       <div class="post-actions">
-        <button class="post-action-btn ${likeClass}" data-action="like" type="button" aria-label="Like">
-          <i class="bi ${likeIcon}"></i>
-          <span>${likesCount}</span>
-        </button>
+        ${buildReactionControlHtml({
+          targetType: 'post',
+          targetId: post?.id,
+          count: likesCount,
+          userReaction: post?.user_reaction || null,
+          tooltip: post?.reaction_tooltip || 'No reactions yet',
+          reactionCounts: post?.reaction_counts || {},
+          reactors: post?.reactors || [],
+          baseClass: 'post-action-btn',
+        })}
         <button class="post-action-btn ${commentClass}" data-action="comment" type="button" aria-label="Comment">
           <i class="bi bi-chat"></i>
           <span>${commentsCount}</span>
@@ -1037,6 +1110,17 @@ function initPostActions() {
       return;
     }
 
+    const reactionOptionBtn = e.target.closest('[data-action="set-post-reaction"]');
+    if (reactionOptionBtn && postsFeed.contains(reactionOptionBtn)) {
+      e.preventDefault();
+      const postId = reactionOptionBtn.dataset.postId;
+      const reactionType = reactionOptionBtn.dataset.reactionType;
+      if (postId && reactionType) {
+        handlePostReactionSelect(postId, reactionType);
+      }
+      return;
+    }
+
     const actionBtn = e.target.closest('.post-action-btn');
     if (!actionBtn) return;
 
@@ -1045,8 +1129,8 @@ function initPostActions() {
     const postId = postCard?.dataset?.postId;
 
     switch (action) {
-      case 'like':
-        handleLike(actionBtn, postId);
+      case 'react-post':
+        handlePostReactionToggle(actionBtn, postId);
         break;
       case 'comment':
         handleComment(actionBtn, postId);
@@ -1624,61 +1708,70 @@ function openFeedPhotoViewerFromTrigger(trigger) {
   openFeedPhotoViewer(galleryImages, clickedIndex >= 0 ? clickedIndex : 0);
 }
 
-/**
- * Handle like button click
- * @param {HTMLElement} button - Like button element
- * @param {string} postId - Post ID
- */
-async function handleLike(button, postId) {
-  const icon = button.querySelector('i');
-  const countSpan = button.querySelector('span');
-  let count = parseInt(countSpan.textContent) || 0;
+function updatePostReactionControl(postCard, reactionState) {
+  const reactionBtn = postCard?.querySelector('.post-action-btn[data-action="react-post"]');
+  if (!reactionBtn) return;
 
-  // Toggle like state
-  if (button.classList.contains('liked')) {
-    // Unlike
-    button.classList.remove('liked');
-    icon.classList.remove('bi-heart-fill');
-    icon.classList.add('bi-heart');
-    count--;
-  } else {
-    // Like
-    button.classList.add('liked');
-    icon.classList.remove('bi-heart');
-    icon.classList.add('bi-heart-fill');
-    count++;
+  const emojiEl = reactionBtn.querySelector('.reaction-emoji');
+  const countEl = reactionBtn.querySelector('span:last-child');
+  const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
 
-    // Add animation
-    button.classList.add('animate-pulse');
-    setTimeout(() => {
-      button.classList.remove('animate-pulse');
-    }, 500);
+  if (emojiEl) emojiEl.textContent = reactionMeta.emoji;
+  if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
+
+  reactionBtn.dataset.userReaction = reactionState?.user_reaction || '';
+  reactionBtn.classList.toggle('liked', Boolean(reactionState?.user_reaction));
+  reactionBtn.title = reactionState?.reaction_tooltip || 'No reactions yet';
+
+  const breakdownEl = postCard?.querySelector('.reaction-breakdown');
+  if (breakdownEl) {
+    breakdownEl.innerHTML = buildReactionBreakdownHtml({
+      reactionCounts: reactionState?.reaction_counts || {},
+      reactors: reactionState?.reactors || [],
+    });
   }
+}
 
-  countSpan.textContent = count;
+async function handlePostReactionToggle(button, postId) {
+  if (!button || !postId) return;
 
-  // Send like/unlike to Supabase
+  const currentReaction = String(button.dataset.userReaction || '').trim();
+
   try {
-    if (button.classList.contains('liked')) {
-      await likePost(postId);
+    if (currentReaction) {
+      await clearPostReaction(postId);
     } else {
-      await unlikePost(postId);
+      await setPostReaction(postId, 'like');
     }
+
+    const reactionState = await getPostReactionState(postId);
+    const postCard = button.closest('.post-card');
+    updatePostReactionControl(postCard, reactionState);
   } catch (error) {
-    console.error('Error updating like:', error);
-    // Revert UI changes on error
-    if (button.classList.contains('liked')) {
-      button.classList.remove('liked');
-      icon.classList.remove('bi-heart-fill');
-      icon.classList.add('bi-heart');
-      count--;
+    console.error('Error updating post reaction:', error);
+    showToast('Failed to update reaction.', 'error');
+  }
+}
+
+async function handlePostReactionSelect(postId, reactionType) {
+  if (!postId || !reactionType) return;
+
+  const postCard = document.querySelector(`.post-card[data-post-id="${CSS.escape(String(postId))}"]`);
+  const reactionBtn = postCard?.querySelector('.post-action-btn[data-action="react-post"]');
+  const currentReaction = String(reactionBtn?.dataset.userReaction || '').trim();
+
+  try {
+    if (currentReaction === reactionType) {
+      await clearPostReaction(postId);
     } else {
-      button.classList.add('liked');
-      icon.classList.remove('bi-heart');
-      icon.classList.add('bi-heart-fill');
-      count++;
+      await setPostReaction(postId, reactionType);
     }
-    countSpan.textContent = count;
+
+    const reactionState = await getPostReactionState(postId);
+    updatePostReactionControl(postCard, reactionState);
+  } catch (error) {
+    console.error('Error setting post reaction:', error);
+    showToast('Failed to update reaction.', 'error');
   }
 }
 
@@ -1762,8 +1855,15 @@ function handleComment(button, postId) {
     const action = actionBtn.dataset.action;
     const commentId = actionBtn.dataset.commentId;
 
-    if (action === 'like-comment' && commentId) {
-      handleCommentLike(actionBtn, commentId);
+    if (action === 'react-comment' && commentId) {
+      handleCommentReactionToggle(actionBtn, commentId);
+    }
+
+    if (action === 'set-comment-reaction' && commentId) {
+      const reactionType = actionBtn.dataset.reactionType;
+      if (reactionType) {
+        handleCommentReactionSelect(commentSection, commentId, reactionType);
+      }
     }
 
     if (action === 'edit-comment' && commentId) {
@@ -1882,9 +1982,6 @@ function renderCommentItem(comment, depth, postId) {
   const fullName = comment?.profiles?.full_name || 'User';
   const avatarUrl = resolveAvatarUrl(comment?.profiles, comment?.profiles?.avatar_url);
   const likesCount = Number.isFinite(comment?.likes_count) ? comment.likes_count : 0;
-  const isLiked = !!comment?.liked_by_user;
-  const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
-  const likeClass = isLiked ? 'liked' : '';
   const safeId = escapeHtml(String(comment?.id || ''));
   const margin = Math.min(depth, 6) * 16;
   const replyCount = countReplies(comment);
@@ -1906,10 +2003,16 @@ function renderCommentItem(comment, depth, postId) {
           <strong class="d-block small">${escapeHtml(fullName)}</strong>
           <span class="small comment-content-text">${escapeHtml(comment.content || '')}</span>
           <div class="comment-actions">
-            <button class="comment-action-btn ${likeClass}" data-action="like-comment" data-comment-id="${safeId}">
-              <i class="bi ${likeIcon}"></i>
-              <span>${likesCount}</span>
-            </button>
+            ${buildReactionControlHtml({
+              targetType: 'comment',
+              targetId: comment?.id,
+              count: likesCount,
+              userReaction: comment?.user_reaction || null,
+              tooltip: comment?.reaction_tooltip || 'No reactions yet',
+              reactionCounts: comment?.reaction_counts || {},
+              reactors: comment?.reactors || [],
+              baseClass: 'comment-action-btn',
+            })}
             <button class="comment-action-btn" data-action="reply-comment" data-comment-id="${safeId}">Reply</button>
             ${manageActions}
             ${replyCount ? `<span class="comment-reply-count comment-toggle-replies" data-comment-id="${safeId}">${replyCount} ${replyLabel}</span>` : ''}
@@ -1967,45 +2070,70 @@ function toggleReplies(commentItem) {
   replies.classList.toggle('d-none');
 }
 
-async function handleCommentLike(button, commentId) {
-  const icon = button.querySelector('i');
-  const countSpan = button.querySelector('span');
-  let count = parseInt(countSpan.textContent, 10) || 0;
+function updateCommentReactionControl(commentSection, commentId, reactionState) {
+  const reactionBtn = commentSection?.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(commentId))}"] .comment-action-btn[data-action="react-comment"]`);
+  if (!reactionBtn) return;
 
-  if (button.classList.contains('liked')) {
-    button.classList.remove('liked');
-    icon.classList.remove('bi-heart-fill');
-    icon.classList.add('bi-heart');
-    count--;
-  } else {
-    button.classList.add('liked');
-    icon.classList.remove('bi-heart');
-    icon.classList.add('bi-heart-fill');
-    count++;
+  const emojiEl = reactionBtn.querySelector('.reaction-emoji');
+  const countEl = reactionBtn.querySelector('span:last-child');
+  const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
+
+  if (emojiEl) emojiEl.textContent = reactionMeta.emoji;
+  if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
+
+  reactionBtn.dataset.userReaction = reactionState?.user_reaction || '';
+  reactionBtn.classList.toggle('liked', Boolean(reactionState?.user_reaction));
+  reactionBtn.title = reactionState?.reaction_tooltip || 'No reactions yet';
+
+  const reactionControl = reactionBtn.closest('.reaction-control');
+  const breakdownEl = reactionControl?.querySelector('.reaction-breakdown');
+  if (breakdownEl) {
+    breakdownEl.innerHTML = buildReactionBreakdownHtml({
+      reactionCounts: reactionState?.reaction_counts || {},
+      reactors: reactionState?.reactors || [],
+    });
   }
+}
 
-  countSpan.textContent = count;
+async function handleCommentReactionToggle(button, commentId) {
+  if (!button || !commentId) return;
+
+  const currentReaction = String(button.dataset.userReaction || '').trim();
+  const commentSection = button.closest('.comment-section');
 
   try {
-    if (button.classList.contains('liked')) {
-      await likeComment(commentId);
+    if (currentReaction) {
+      await clearCommentReaction(commentId);
     } else {
-      await unlikeComment(commentId);
+      await setCommentReaction(commentId, 'like');
     }
+
+    const reactionState = await getCommentReactionState(commentId);
+    updateCommentReactionControl(commentSection, commentId, reactionState);
   } catch (error) {
-    console.error('Error updating comment like:', error);
-    if (button.classList.contains('liked')) {
-      button.classList.remove('liked');
-      icon.classList.remove('bi-heart-fill');
-      icon.classList.add('bi-heart');
-      count--;
+    console.error('Error updating comment reaction:', error);
+    showToast('Failed to update reaction.', 'error');
+  }
+}
+
+async function handleCommentReactionSelect(commentSection, commentId, reactionType) {
+  if (!commentId || !reactionType) return;
+
+  const reactionBtn = commentSection?.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(commentId))}"] .comment-action-btn[data-action="react-comment"]`);
+  const currentReaction = String(reactionBtn?.dataset.userReaction || '').trim();
+
+  try {
+    if (currentReaction === reactionType) {
+      await clearCommentReaction(commentId);
     } else {
-      button.classList.add('liked');
-      icon.classList.remove('bi-heart');
-      icon.classList.add('bi-heart-fill');
-      count++;
+      await setCommentReaction(commentId, reactionType);
     }
-    countSpan.textContent = count;
+
+    const reactionState = await getCommentReactionState(commentId);
+    updateCommentReactionControl(commentSection, commentId, reactionState);
+  } catch (error) {
+    console.error('Error setting comment reaction:', error);
+    showToast('Failed to update reaction.', 'error');
   }
 }
 

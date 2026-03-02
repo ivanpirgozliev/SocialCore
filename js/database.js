@@ -241,12 +241,16 @@ export async function likePost(postId) {
 
   const { error } = await supabase
     .from('likes')
-    .insert([
+    .upsert([
       {
         user_id: user.id,
         post_id: postId,
+        reaction_type: 'like',
       }
-    ]);
+    ], {
+      onConflict: 'user_id,post_id',
+      ignoreDuplicates: false,
+    });
 
   if (error) throw error;
 }
@@ -363,12 +367,16 @@ export async function likeComment(commentId) {
 
   const { error } = await supabase
     .from('likes')
-    .insert([
+    .upsert([
       {
         user_id: user.id,
         comment_id: commentId,
+        reaction_type: 'like',
       }
-    ]);
+    ], {
+      onConflict: 'user_id,comment_id',
+      ignoreDuplicates: false,
+    });
 
   if (error) throw error;
 }
@@ -409,6 +417,203 @@ export async function isCommentLiked(commentId) {
   return !error && !!data;
 }
 
+const SUPPORTED_REACTIONS = ['like', 'love', 'haha', 'wow', 'sad', 'angry'];
+
+const REACTION_LABELS = {
+  like: 'Like',
+  love: 'Love',
+  haha: 'Haha',
+  wow: 'Wow',
+  sad: 'Sad',
+  angry: 'Angry',
+};
+
+const REACTION_EMOJIS = {
+  like: '👍',
+  love: '❤️',
+  haha: '😂',
+  wow: '😮',
+  sad: '😢',
+  angry: '😡',
+};
+
+function normalizeReactionType(value) {
+  const reaction = String(value || '').trim().toLowerCase();
+  return SUPPORTED_REACTIONS.includes(reaction) ? reaction : 'like';
+}
+
+function getProfileDisplayName(profile) {
+  return profile?.full_name || profile?.username || 'User';
+}
+
+function buildReactionSummary(reactions, currentUserId) {
+  const items = Array.isArray(reactions) ? reactions : [];
+
+  const counts = {
+    like: 0,
+    love: 0,
+    haha: 0,
+    wow: 0,
+    sad: 0,
+    angry: 0,
+  };
+
+  let userReaction = null;
+
+  items.forEach((reactionRow) => {
+    const reactionType = normalizeReactionType(reactionRow?.reaction_type);
+    counts[reactionType] += 1;
+
+    if (currentUserId && reactionRow?.user_id === currentUserId) {
+      userReaction = reactionType;
+    }
+  });
+
+  const total = items.length;
+  const topReactions = Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([reactionType]) => reactionType);
+
+  const reactors = items.slice(0, 12).map((reactionRow) => {
+    const reactionType = normalizeReactionType(reactionRow?.reaction_type);
+    const displayName = getProfileDisplayName(reactionRow?.profiles);
+
+    return {
+      user_id: reactionRow?.user_id,
+      name: displayName,
+      reaction_type: reactionType,
+      reaction_emoji: REACTION_EMOJIS[reactionType] || '👍',
+    };
+  });
+
+  const tooltip = reactors.length
+    ? reactors.map((reactor) => `${reactor.reaction_emoji} ${reactor.name}`).join('\n')
+    : 'No reactions yet';
+
+  return {
+    reactions_total: total,
+    reaction_counts: counts,
+    reaction_top: topReactions,
+    reacted_by_user: Boolean(userReaction),
+    user_reaction: userReaction,
+    reactors,
+    reaction_tooltip: tooltip,
+  };
+}
+
+function buildReactionMap(rows, targetField) {
+  const map = new Map();
+
+  (rows || []).forEach((row) => {
+    const targetId = row?.[targetField];
+    if (!targetId) return;
+    if (!map.has(targetId)) map.set(targetId, []);
+    map.get(targetId).push(row);
+  });
+
+  return map;
+}
+
+export async function setPostReaction(postId, reactionType = 'like') {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const normalizedReaction = normalizeReactionType(reactionType);
+
+  const { error } = await supabase
+    .from('likes')
+    .upsert([
+      {
+        user_id: user.id,
+        post_id: postId,
+        reaction_type: normalizedReaction,
+      },
+    ], {
+      onConflict: 'user_id,post_id',
+      ignoreDuplicates: false,
+    });
+
+  if (error) throw error;
+}
+
+export async function clearPostReaction(postId) {
+  return unlikePost(postId);
+}
+
+export async function setCommentReaction(commentId, reactionType = 'like') {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const normalizedReaction = normalizeReactionType(reactionType);
+
+  const { error } = await supabase
+    .from('likes')
+    .upsert([
+      {
+        user_id: user.id,
+        comment_id: commentId,
+        reaction_type: normalizedReaction,
+      },
+    ], {
+      onConflict: 'user_id,comment_id',
+      ignoreDuplicates: false,
+    });
+
+  if (error) throw error;
+}
+
+export async function clearCommentReaction(commentId) {
+  return unlikeComment(commentId);
+}
+
+export async function getPostReactionState(postId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id || null;
+
+  const { data, error } = await supabase
+    .from('likes')
+    .select(`
+      post_id,
+      user_id,
+      reaction_type,
+      created_at,
+      profiles:user_id (
+        full_name,
+        username
+      )
+    `)
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return buildReactionSummary(data || [], currentUserId);
+}
+
+export async function getCommentReactionState(commentId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id || null;
+
+  const { data, error } = await supabase
+    .from('likes')
+    .select(`
+      comment_id,
+      user_id,
+      reaction_type,
+      created_at,
+      profiles:user_id (
+        full_name,
+        username
+      )
+    `)
+    .eq('comment_id', commentId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return buildReactionSummary(data || [], currentUserId);
+}
+
 function resolveRelationCount(row, relationName, fallbackField) {
   const relation = row?.[relationName];
   if (Array.isArray(relation) && relation.length && relation[0]?.count != null) {
@@ -431,26 +636,59 @@ async function hydratePostLikeState(posts) {
   }));
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return normalized.map((post) => ({ ...post, liked_by_user: false }));
+  const currentUserId = user?.id || null;
 
   const postIds = normalized.map((post) => post.id).filter(Boolean);
-  if (!postIds.length) return normalized.map((post) => ({ ...post, liked_by_user: false }));
+  if (!postIds.length) {
+    return normalized.map((post) => ({
+      ...post,
+      liked_by_user: false,
+      user_reaction: null,
+      reaction_counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+      reaction_top: [],
+      reactors: [],
+      reaction_tooltip: 'No reactions yet',
+    }));
+  }
 
   const { data: likesData, error } = await supabase
     .from('likes')
-    .select('post_id')
-    .eq('user_id', user.id)
-    .in('post_id', postIds);
+    .select(`
+      post_id,
+      user_id,
+      reaction_type,
+      created_at,
+      profiles:user_id (
+        full_name,
+        username
+      )
+    `)
+    .in('post_id', postIds)
+    .order('created_at', { ascending: false });
 
   if (error) {
-    return normalized.map((post) => ({ ...post, liked_by_user: false }));
+    return normalized.map((post) => ({
+      ...post,
+      liked_by_user: false,
+      user_reaction: null,
+      reaction_counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+      reaction_top: [],
+      reactors: [],
+      reaction_tooltip: 'No reactions yet',
+    }));
   }
 
-  const likedSet = new Set((likesData || []).map((like) => like.post_id));
-  return normalized.map((post) => ({
-    ...post,
-    liked_by_user: likedSet.has(post.id),
-  }));
+  const reactionMap = buildReactionMap(likesData || [], 'post_id');
+
+  return normalized.map((post) => {
+    const reactionSummary = buildReactionSummary(reactionMap.get(post.id) || [], currentUserId);
+    return {
+      ...post,
+      likes_count: reactionSummary.reactions_total,
+      ...reactionSummary,
+      liked_by_user: reactionSummary.reacted_by_user,
+    };
+  });
 }
 
 async function hydrateCommentLikeState(comments) {
@@ -462,26 +700,59 @@ async function hydrateCommentLikeState(comments) {
   }));
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+  const currentUserId = user?.id || null;
 
   const commentIds = normalized.map((comment) => comment.id).filter(Boolean);
-  if (!commentIds.length) return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+  if (!commentIds.length) {
+    return normalized.map((comment) => ({
+      ...comment,
+      liked_by_user: false,
+      user_reaction: null,
+      reaction_counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+      reaction_top: [],
+      reactors: [],
+      reaction_tooltip: 'No reactions yet',
+    }));
+  }
 
   const { data: likesData, error } = await supabase
     .from('likes')
-    .select('comment_id')
-    .eq('user_id', user.id)
-    .in('comment_id', commentIds);
+    .select(`
+      comment_id,
+      user_id,
+      reaction_type,
+      created_at,
+      profiles:user_id (
+        full_name,
+        username
+      )
+    `)
+    .in('comment_id', commentIds)
+    .order('created_at', { ascending: false });
 
   if (error) {
-    return normalized.map((comment) => ({ ...comment, liked_by_user: false }));
+    return normalized.map((comment) => ({
+      ...comment,
+      liked_by_user: false,
+      user_reaction: null,
+      reaction_counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+      reaction_top: [],
+      reactors: [],
+      reaction_tooltip: 'No reactions yet',
+    }));
   }
 
-  const likedSet = new Set((likesData || []).map((like) => like.comment_id));
-  return normalized.map((comment) => ({
-    ...comment,
-    liked_by_user: likedSet.has(comment.id),
-  }));
+  const reactionMap = buildReactionMap(likesData || [], 'comment_id');
+
+  return normalized.map((comment) => {
+    const reactionSummary = buildReactionSummary(reactionMap.get(comment.id) || [], currentUserId);
+    return {
+      ...comment,
+      likes_count: reactionSummary.reactions_total,
+      ...reactionSummary,
+      liked_by_user: reactionSummary.reacted_by_user,
+    };
+  });
 }
 
 /**
