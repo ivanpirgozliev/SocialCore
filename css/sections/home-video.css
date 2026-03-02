@@ -137,6 +137,11 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.homepage-with-video .btn-cta {
+  background: rgba(255, 255, 255, 0.92);
+  opacity: 0.6;
+}
+
 /* Section backgrounds for contrast */
 .homepage-with-video #features {
   background: rgba(255, 255, 255, 0.60);
