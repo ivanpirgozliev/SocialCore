@@ -35,6 +35,8 @@ let feedPostEditorState = {
   isSubmitting: false,
   previewObjectUrl: null,
 };
+let feedRealtimeCleanup = null;
+let feedRelationshipsRefreshTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initFeedTabs();
@@ -61,7 +63,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize search functionality
   initSearch();
+
+  initFeedRealtime();
+
+  window.addEventListener('beforeunload', () => {
+    if (typeof feedRealtimeCleanup === 'function') {
+      feedRealtimeCleanup();
+      feedRealtimeCleanup = null;
+    }
+  });
 });
+
+function scheduleFeedRelationshipsRefresh() {
+  if (feedRelationshipsRefreshTimer) {
+    clearTimeout(feedRelationshipsRefreshTimer);
+  }
+
+  feedRelationshipsRefreshTimer = setTimeout(() => {
+    Promise.all([
+      refreshNotificationsMenu(),
+      initPeopleYouMayKnow(),
+      refreshFollowingSectionAfterFriendChange(),
+    ]).catch((error) => {
+      console.error('Realtime feed relationship refresh failed:', error);
+    });
+  }, 120);
+}
+
+async function initFeedRealtime() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
+
+    if (typeof feedRealtimeCleanup === 'function') {
+      feedRealtimeCleanup();
+      feedRealtimeCleanup = null;
+    }
+
+    const channels = [];
+    const userId = user.id;
+
+    const requesterChannel = supabase
+      .channel(`realtime:feed:friend-requests:requester:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `requester_id=eq.${userId}` },
+        () => {
+          scheduleFeedRelationshipsRefresh();
+        }
+      )
+      .subscribe();
+    channels.push(requesterChannel);
+
+    const addresseeChannel = supabase
+      .channel(`realtime:feed:friend-requests:addressee:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${userId}` },
+        () => {
+          scheduleFeedRelationshipsRefresh();
+        }
+      )
+      .subscribe();
+    channels.push(addresseeChannel);
+
+    const followsChannel = supabase
+      .channel(`realtime:feed:follows:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follows', filter: `follower_id=eq.${userId}` },
+        () => {
+          scheduleFeedRelationshipsRefresh();
+        }
+      )
+      .subscribe();
+    channels.push(followsChannel);
+
+    feedRealtimeCleanup = () => {
+      try {
+        channels.forEach((channel) => {
+          supabase.removeChannel(channel);
+        });
+
+        if (feedRelationshipsRefreshTimer) {
+          clearTimeout(feedRelationshipsRefreshTimer);
+          feedRelationshipsRefreshTimer = null;
+        }
+      } catch {
+        // ignore
+      }
+    };
+  } catch (error) {
+    console.warn('Feed realtime unavailable:', error);
+  }
+}
 
 async function initCommentPermissions() {
   const storedUser = getStoredUser();
@@ -420,6 +515,15 @@ async function loadFollowingAccounts() {
   }
 }
 
+async function refreshFollowingSectionAfterFriendChange() {
+  if (currentFeedTab === 'following') {
+    await loadInitialFeedPosts();
+    return;
+  }
+
+  await loadFollowingAccounts();
+}
+
 function initFollowingFiltersActions() {
   const { list } = getFollowingFiltersElements();
   if (!list) return;
@@ -693,7 +797,11 @@ function initPeopleYouMayKnowActions() {
     }
 
     button.disabled = false;
-    await Promise.all([initPeopleYouMayKnow(), refreshNotificationsMenu()]);
+    await Promise.all([
+      initPeopleYouMayKnow(),
+      refreshNotificationsMenu(),
+      refreshFollowingSectionAfterFriendChange(),
+    ]);
   });
 }
 
@@ -858,7 +966,11 @@ function initNotificationActions() {
       return;
     }
 
-    await Promise.all([refreshNotificationsMenu(), initPeopleYouMayKnow()]);
+    await Promise.all([
+      refreshNotificationsMenu(),
+      initPeopleYouMayKnow(),
+      refreshFollowingSectionAfterFriendChange(),
+    ]);
   });
 }
 
