@@ -42,3 +42,15 @@
 	color: #6a5e56 !important;
 }
 
+@media (min-width: 992px) {
+	.profile-content-row {
+		align-items: flex-start;
+	}
+
+	.profile-left-column {
+		position: sticky;
+		top: 92px;
+		align-self: flex-start;
+	}
+}
+
