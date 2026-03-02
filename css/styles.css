@@ -450,4 +450,180 @@ hr,
 	color: var(--text-primary) !important;
 }
 
+/* ============================================
+   Photo Viewer Modal – themed dark overlay
+   ============================================ */
+#feedPhotoViewerModal .modal-content,
+#profilePhotoViewerModal .modal-content,
+#photosViewerModal .modal-content {
+	background-color: #2C2926 !important;
+	border: 1px solid var(--border-soft) !important;
+}
+
+#feedPhotoViewerModal .modal-header,
+#profilePhotoViewerModal .modal-header {
+	border-bottom: 1px solid rgba(200, 185, 171, 0.25) !important;
+}
+
+#feedPhotoViewerModal .modal-title,
+#profilePhotoViewerModal .modal-title {
+	color: var(--card-bg) !important;
+	-webkit-text-fill-color: var(--card-bg) !important;
+}
+
+#feedPhotoViewerModal .btn-close,
+#profilePhotoViewerModal .btn-close,
+#photosViewerModal .btn-close {
+	filter: invert(0.85) sepia(0.08) saturate(0.4) hue-rotate(5deg) !important;
+	opacity: 0.8 !important;
+}
+
+#feedPhotoViewerModal .btn-close:hover,
+#profilePhotoViewerModal .btn-close:hover,
+#photosViewerModal .btn-close:hover {
+	opacity: 1 !important;
+}
+
+#feedPhotoViewerModal .text-white-50,
+#profilePhotoViewerModal .text-white-50,
+#photosViewerModal .text-white-50 {
+	color: var(--border-soft) !important;
+}
+
+/* ============================================
+   Nav-link active / hover – warm tones
+   ============================================ */
+.nav-link:hover {
+	color: var(--text-primary) !important;
+}
+
+.nav-link.active {
+	color: var(--text-primary) !important;
+	background-color: rgba(106, 94, 86, 0.12) !important;
+}
+
+/* ============================================
+   Form focus shadows – replace all blue rgba
+   ============================================ */
+.form-control:focus,
+.birthday-picker .form-select:focus {
+	box-shadow: var(--focus-ring-soft) !important;
+}
+
+.form-select:focus {
+	border-color: var(--text-primary) !important;
+	box-shadow: var(--focus-ring-soft) !important;
+}
+
+.input-group:focus-within .input-group-text {
+	border-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Form check / switch – warm theme
+   ============================================ */
+.form-check-input:checked {
+	background-color: var(--text-primary) !important;
+	border-color: var(--text-primary) !important;
+}
+
+.form-check-input:focus {
+	box-shadow: var(--focus-ring-soft) !important;
+	border-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Nav pills (settings tabs) – warm theme
+   ============================================ */
+.nav-pills .nav-link:hover {
+	color: var(--text-primary) !important;
+}
+
+.nav-pills .nav-link.active {
+	color: var(--text-primary) !important;
+	background-color: rgba(106, 94, 86, 0.12) !important;
+	border-left-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Card header icon colour
+   ============================================ */
+.card-header h5 i {
+	color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Upload dropzone – warm tints
+   ============================================ */
+.upload-dropzone {
+	background: linear-gradient(135deg, rgba(106, 94, 86, 0.06), rgba(92, 106, 196, 0.06)) !important;
+}
+
+.upload-dropzone:hover {
+	border-color: var(--text-primary) !important;
+}
+
+.upload-dropzone.is-dragover {
+	border-color: var(--text-primary) !important;
+	background: linear-gradient(135deg, rgba(106, 94, 86, 0.12), rgba(92, 106, 196, 0.12)) !important;
+}
+
+.upload-dropzone-icon {
+	background: var(--text-primary) !important;
+}
+
+/* ============================================
+   Text gradient – warm brand
+   ============================================ */
+.text-gradient {
+	background: linear-gradient(135deg, var(--text-primary) 0%, var(--brand-primary) 100%) !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	background-clip: text !important;
+}
+
+/* ============================================
+   Post action buttons – warm hover/active
+   ============================================ */
+.post-action-btn:hover {
+	color: var(--text-primary) !important;
+}
+
+.post-action-btn.has-comments {
+	color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Following filter chips – warm active
+   ============================================ */
+.following-filter-chip.active {
+	color: var(--text-primary) !important;
+}
+
+.following-filter-chip.active .following-filter-avatar {
+	border-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Messaging bubble "mine" (global, not just drawer)
+   ============================================ */
+.messaging-bubble--mine {
+	background: var(--text-primary) !important;
+	color: #ffffff !important;
+}
+
+/* ============================================
+   Bootstrap .bg-primary override
+   ============================================ */
+.bg-primary {
+	background-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Info semantic colour – warm
+   ============================================ */
+.text-info,
+.badge.bg-info {
+	color: var(--brand-primary) !important;
+}
 
