@@ -390,4 +390,43 @@ hr,
 	text-overflow: ellipsis;
 }
 
+/* Messaging drawer/bar theme and contrast */
+.messaging-bar .text-primary,
+.messaging-drawer .text-primary {
+	color: var(--text-primary) !important;
+}
+
+.messaging-drawer .btn.btn-primary {
+	background-color: var(--text-primary) !important;
+	border-color: var(--text-primary) !important;
+	color: #ffffff !important;
+}
+
+.messaging-drawer .btn.btn-primary:hover,
+.messaging-drawer .btn.btn-primary:focus {
+	background-color: var(--gray-600) !important;
+	border-color: var(--gray-600) !important;
+	color: #ffffff !important;
+}
+
+.messaging-drawer .messaging-bubble--theirs {
+	background-color: var(--bg-soft) !important;
+	border-color: var(--border-soft) !important;
+	color: var(--text-primary) !important;
+}
+
+.messaging-drawer .messaging-bubble--mine {
+	background: var(--text-primary) !important;
+	border: 1px solid var(--text-primary) !important;
+	color: #ffffff !important;
+}
+
+.messaging-drawer .messaging-bubble--mine .small {
+	color: #ffffff !important;
+}
+
+.messaging-drawer .messaging-bubble--theirs .small {
+	color: var(--text-primary) !important;
+}
+
 
