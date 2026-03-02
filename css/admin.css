@@ -46,3 +46,29 @@
 	justify-content: space-between;
 }
 
+#usersPagination .page-link {
+	color: var(--text-primary);
+	border-color: var(--border-soft);
+	background-color: #ffffff;
+}
+
+#usersPagination .page-link:hover,
+#usersPagination .page-link:focus {
+	color: #ffffff;
+	background-color: var(--text-primary);
+	border-color: var(--text-primary);
+	box-shadow: none;
+}
+
+#usersPagination .page-item.active .page-link {
+	color: #ffffff;
+	background-color: var(--text-primary);
+	border-color: var(--text-primary);
+}
+
+#usersPagination .page-item.disabled .page-link {
+	color: var(--gray-500);
+	background-color: #ffffff;
+	border-color: var(--border-soft);
+}
+

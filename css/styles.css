@@ -192,6 +192,33 @@ small,
 	color: #ffffff !important;
 }
 
+.pagination .page-link {
+	color: var(--text-primary);
+	border-color: var(--border-soft);
+	background-color: #ffffff;
+}
+
+.pagination .page-link:hover,
+.pagination .page-link:focus {
+	color: #ffffff;
+	background-color: var(--text-primary);
+	border-color: var(--text-primary);
+	box-shadow: none;
+	text-decoration: none;
+}
+
+.pagination .page-item.active .page-link {
+	color: #ffffff;
+	background-color: var(--text-primary);
+	border-color: var(--text-primary);
+}
+
+.pagination .page-item.disabled .page-link {
+	color: var(--gray-500);
+	background-color: #ffffff;
+	border-color: var(--border-soft);
+}
+
 .form-control,
 .form-select,
 .input-group-text,
