@@ -49,7 +49,7 @@
 
 	.profile-left-column {
 		position: sticky;
-		top: 92px;
+		top: 84px;
 		align-self: flex-start;
 	}
 }
