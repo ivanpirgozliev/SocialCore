@@ -4,7 +4,7 @@
 // ============================================
 
 import { supabase } from './supabase.js';
-import './main.js';
+import { resolveAvatarUrl } from './main.js';
 import {
   getAdminStats,
   getAdminPosts,
@@ -202,7 +202,7 @@ function renderUsersTable() {
 }
 
 function createUserRow(user) {
-  const avatarUrl = user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'U')}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(user, user.avatar_url);
   const roleBadge = user.role === 'admin'
     ? '<span class="badge bg-danger">Admin</span>'
     : '<span class="badge bg-secondary">User</span>';
@@ -351,7 +351,7 @@ async function loadPosts() {
 
 function createPostRow(post) {
   const authorName = post.profiles?.full_name || 'Unknown';
-  const avatarUrl = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(post.profiles || { full_name: authorName }, post.profiles?.avatar_url);
   const content = post.content.length > 80 ? post.content.substring(0, 80) + '...' : post.content;
   const date = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'

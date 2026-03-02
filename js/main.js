@@ -155,7 +155,7 @@ export function initUserSearch() {
     const html = users.map((user) => {
       const fullName = user?.full_name || user?.username || 'User';
       const username = user?.username || 'user';
-      const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const avatarUrl = resolveAvatarUrl(user, user?.avatar_url);
       const profileHref = `profile.html?id=${encodeURIComponent(String(user?.id || ''))}`;
 
       return `
@@ -317,7 +317,7 @@ function initMobileXNavigation() {
       <span class="mobile-topbar-logo-text">${escapeHtml(brandLabel)}</span>
     </a>
     <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-topbar-avatar-link" aria-label="Open profile">
-      <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="js-navbar-avatar" width="36" height="36" loading="lazy">
+      <img src="https://ui-avatars.com/api/?name=User&background=6A5E56&color=fff" alt="Profile" class="js-navbar-avatar" width="36" height="36" loading="lazy">
     </a>
   `;
 
@@ -369,7 +369,7 @@ function initMobileXNavigation() {
   drawer.innerHTML = `
     <div class="mobile-drawer-header">
       <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-drawer-profile-link">
-        <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="js-navbar-avatar" width="44" height="44" loading="lazy">
+        <img src="https://ui-avatars.com/api/?name=User&background=6A5E56&color=fff" alt="Profile" class="js-navbar-avatar" width="44" height="44" loading="lazy">
       </a>
       <button type="button" class="btn btn-outline-primary btn-sm" data-action="logout">Logout</button>
     </div>
@@ -575,9 +575,27 @@ export function getStoredUser() {
   }
 }
 
-function buildFallbackAvatarUrl(user) {
-  const name = user?.name || user?.username || user?.email || 'User';
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff`;
+function isSystemGeneratedAvatar(url) {
+  return /ui-avatars\.com\/api/i.test(String(url || ''));
+}
+
+function getAvatarDisplayName(user) {
+  return user?.full_name || user?.name || user?.username || user?.email || 'User';
+}
+
+function buildFallbackAvatarUrl(user, { size } = {}) {
+  const name = getAvatarDisplayName(user);
+  const sizeParam = Number.isFinite(size) ? `&size=${Math.max(16, Math.round(size))}` : '';
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6A5E56&color=fff${sizeParam}`;
+}
+
+export function resolveAvatarUrl(user, preferredUrl, options = {}) {
+  const candidate = String(preferredUrl || '').trim();
+  if (candidate && !isSystemGeneratedAvatar(candidate)) {
+    return candidate;
+  }
+
+  return buildFallbackAvatarUrl(user, options);
 }
 
 export async function refreshStoredUserFromProfile() {
@@ -594,7 +612,14 @@ export async function refreshStoredUserFromProfile() {
       ...user,
       name: profile.full_name || user.name,
       username: profile.username || user.username,
-      avatar: profile.avatar_url || user.avatar,
+      avatar: resolveAvatarUrl(
+        {
+          ...user,
+          name: profile.full_name || user.name,
+          username: profile.username || user.username,
+        },
+        profile.avatar_url || user.avatar
+      ),
     };
 
     localStorage.setItem('socialcore_user', JSON.stringify(updatedUser));
@@ -719,7 +744,7 @@ export async function refreshNotificationsMenu() {
 
     const itemsHtml = requests.map((request) => {
       const fullName = request?.full_name || request?.username || 'User';
-      const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const avatarUrl = resolveAvatarUrl(request, request?.avatar_url);
       const requestId = escapeHtml(String(request?.request_id || ''));
       const profileHref = request?.id ? `profile.html?id=${encodeURIComponent(request.id)}` : 'profile.html';
 
@@ -960,7 +985,7 @@ async function loadMessagesPreview(messagesMenu) {
 
     const itemsHtml = conversations.map((c) => {
       const name = c.other?.full_name || c.other?.username || 'Conversation';
-      const avatar = c.other?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff&size=64`;
+      const avatar = resolveAvatarUrl(c.other, c.other?.avatar_url, { size: 64 });
       const preview = c.last_message?.body ? escapeHtml(truncateText(c.last_message.body, 60)) : 'No messages yet';
       const unreadDot = c.has_unread ? '<span class="badge bg-danger ms-auto" style="width:8px;height:8px;border-radius:9999px;padding:0"></span>' : '';
 
@@ -1357,7 +1382,7 @@ async function renderConversationListView() {
       <div class="list-group list-group-flush">
         ${conversations.map((c) => {
           const name = c.other?.full_name || c.other?.username || 'Conversation';
-          const avatar = c.other?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff&size=64`;
+          const avatar = resolveAvatarUrl(c.other, c.other?.avatar_url, { size: 64 });
           const preview = c.last_message?.body ? escapeHtml(truncateText(c.last_message.body, 60)) : 'No messages yet';
           const unreadClass = c.has_unread ? 'messaging-unread' : '';
 
@@ -1411,7 +1436,7 @@ async function renderNewMessageView() {
       <div class="list-group list-group-flush">
         ${friends.map((f) => {
           const name = f.full_name || f.username || 'User';
-          const avatar = f.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff&size=64`;
+          const avatar = resolveAvatarUrl(f, f.avatar_url, { size: 64 });
           return `
             <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" data-action="messaging-start" data-user-id="${escapeHtml(f.id)}">
               <img src="${escapeHtml(avatar)}" alt="${escapeHtml(name)}" width="38" height="38" class="rounded-circle" loading="lazy">
@@ -1504,8 +1529,16 @@ function initNavbarUserAvatar() {
   if (!avatarEls.length) return;
 
   const user = getStoredUser();
-  const avatarUrl = user?.avatar || buildFallbackAvatarUrl(user);
+  const avatarUrl = resolveAvatarUrl(user, user?.avatar);
   const altText = user?.name ? `${user.name} profile photo` : 'Profile';
+
+  if (user?.id && avatarUrl !== user?.avatar) {
+    try {
+      localStorage.setItem('socialcore_user', JSON.stringify({ ...user, avatar: avatarUrl }));
+    } catch {
+      // ignore
+    }
+  }
 
   avatarEls.forEach((img) => {
     img.src = avatarUrl;

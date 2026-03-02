@@ -3,7 +3,7 @@
  * Handles friends list, friend requests, and suggestions
  */
 
-import { showToast, formatRelativeTime } from './main.js';
+import { showToast, formatRelativeTime, resolveAvatarUrl } from './main.js';
 import { getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, getFriendsList, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend } from './database.js';
 import { supabase } from './supabase.js';
 
@@ -378,7 +378,7 @@ function createFriendCard(person, type) {
 
   const fullName = person?.full_name || person?.username || 'User';
   const username = person?.username || 'user';
-  const avatarUrl = person?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(person, person?.avatar_url);
   const profileHref = person?.id ? `profile.html?id=${encodeURIComponent(person.id)}` : 'profile.html';
 
   let actionButtons = '';
@@ -555,7 +555,7 @@ function createSuggestionCard(profile) {
   col.className = 'col-12';
 
   const fullName = profile?.full_name || profile?.username || 'User';
-  const avatarUrl = profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(profile, profile?.avatar_url);
   const profileHref = profile?.id ? `profile.html?id=${encodeURIComponent(profile.id)}` : 'profile.html';
   const mutualFriends = Number.isFinite(profile?.mutual_friends) ? profile.mutual_friends : 0;
   const mutualLabel = mutualFriends === 1 ? 'mutual friend' : 'mutual friends';

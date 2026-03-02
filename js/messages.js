@@ -2,7 +2,7 @@
  * SocialCore - Messages Page Module
  */
 
-import { showToast, truncateText, getStoredUser, refreshStoredUserFromProfile } from './main.js';
+import { showToast, truncateText, getStoredUser, refreshStoredUserFromProfile, resolveAvatarUrl } from './main.js';
 import {
   getMyConversations,
   getConversationMessages,
@@ -75,7 +75,7 @@ async function initMessagesPage() {
 
     listEl.innerHTML = conversations.map((c) => {
       const name = c.other?.full_name || c.other?.username || 'Conversation';
-      const avatar = c.other?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=fff&size=64`;
+      const avatar = resolveAvatarUrl(c.other, c.other?.avatar_url, { size: 64 });
       const preview = c.last_message?.body ? escapeHtml(truncateText(c.last_message.body, 60)) : 'No messages yet';
       const unreadDot = c.has_unread ? '<span class="badge bg-danger" style="width:8px;height:8px;border-radius:9999px;padding:0"></span>' : '';
       const activeClass = c.id === activeConversationId ? 'active' : '';

@@ -53,7 +53,7 @@ function initLoginForm(form) {
         email: data.user.email,
         name: data.user.user_metadata?.full_name || 'User',
         username: data.user.user_metadata?.username || data.user.email.split('@')[0],
-        avatar: data.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.user_metadata?.full_name || 'User')}&background=3B82F6&color=fff`,
+        avatar: data.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.user_metadata?.full_name || 'User')}&background=6A5E56&color=fff`,
       };
       localStorage.setItem('socialcore_user', JSON.stringify(userData));
 
@@ -154,7 +154,7 @@ function initRegisterForm(form) {
         email: data.user.email,
         name: `${userData.firstName} ${userData.lastName}`,
         username: userData.username,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.firstName + ' ' + userData.lastName)}&background=3B82F6&color=fff`,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.firstName + ' ' + userData.lastName)}&background=6A5E56&color=fff`,
       };
       localStorage.setItem('socialcore_user', JSON.stringify(newUserData));
 

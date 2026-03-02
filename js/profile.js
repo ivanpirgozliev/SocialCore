@@ -3,7 +3,7 @@
  * Handles user profile functionality
  */
 
-import { showToast, getStoredUser, refreshStoredUserFromProfile } from './main.js';
+import { showToast, getStoredUser, refreshStoredUserFromProfile, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
 import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, updatePost, deletePost, uploadPostImage, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
 
@@ -378,7 +378,7 @@ async function loadProfileFriends(userId) {
 
     const cards = friends.map((friend) => {
       const fullName = friend?.full_name || friend?.username || 'User';
-      const avatarUrl = friend?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const avatarUrl = resolveAvatarUrl(friend, friend?.avatar_url);
       const profileHref = friend?.id ? `profile.html?id=${encodeURIComponent(friend.id)}` : 'profile.html';
 
       return `
@@ -949,7 +949,7 @@ function updateProfileUI(profile) {
   }
   
   // Update profile header avatar (avoid brittle alt-based selectors)
-  const avatarUrl = profile?.avatar_url || storedUser?.avatar;
+  const avatarUrl = resolveAvatarUrl(profile || storedUser, profile?.avatar_url || storedUser?.avatar);
   const avatarImg = document.querySelector('.profile-avatar-large');
   if (avatarImg && avatarUrl) {
     avatarImg.src = avatarUrl;
@@ -1026,7 +1026,7 @@ function updateProfileUIFromLocalStorage(userData) {
   const usernameElement = document.querySelector('.profile-info p.text-muted');
   if (usernameElement) usernameElement.textContent = `@${userData.username || 'user'}`;
 
-  const avatarUrl = userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const avatarUrl = resolveAvatarUrl(userData, userData.avatar);
   const avatarImg = document.querySelector('.profile-avatar-large');
   if (avatarImg) {
     avatarImg.src = avatarUrl;
@@ -1310,7 +1310,7 @@ async function openEditProfileModal() {
   const safeBio = (profile?.bio || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeLocation = (profile?.location || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const safeWebsite = (profile?.website || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const avatarUrl = profile?.avatar_url || userData.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=100';
+  const avatarUrl = resolveAvatarUrl({ ...userData, ...profile }, profile?.avatar_url || userData.avatar, { size: 100 });
   
   // Check if modal already exists
   let editModal = document.getElementById('editProfileModal');
@@ -2026,7 +2026,7 @@ function handleComment(button, postId) {
   commentSection.dataset.postId = postId;
 
   const user = getStoredUser();
-  const currentUserAvatarUrl = user?.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const currentUserAvatarUrl = resolveAvatarUrl(user, user?.avatar);
 
   commentSection.innerHTML = `
     <div class="d-flex gap-2 mb-3">
@@ -2193,7 +2193,7 @@ function buildCommentTree(comments) {
 
 function renderCommentItem(comment, depth) {
   const fullName = comment?.profiles?.full_name || 'User';
-  const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const avatarUrl = resolveAvatarUrl(comment?.profiles, comment?.profiles?.avatar_url);
   const likesCount = Number.isFinite(comment?.likes_count) ? comment.likes_count : 0;
   const isLiked = !!comment?.liked_by_user;
   const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';

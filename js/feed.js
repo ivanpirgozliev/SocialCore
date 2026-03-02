@@ -3,7 +3,7 @@
  * Handles posts feed functionality
  */
 
-import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch } from './main.js';
+import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
 import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, likePost, unlikePost, createComment, getPostComments, likeComment, unlikeComment, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
 
@@ -346,7 +346,7 @@ function createFeedPostHtml(post) {
   const username = post?.profiles?.username || 'user';
   const authorId = post?.profiles?.id;
   const profileHref = authorId ? `profile.html?id=${encodeURIComponent(authorId)}` : 'profile.html';
-  const avatarUrl = post?.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(post?.profiles, post?.profiles?.avatar_url);
   const contentHtml = formatPostContentHtml(post?.content || '');
   const linkPreviewHtml = createPostLinkPreviewHtml(post?.content || '', { hidden: Boolean(post?.image_url) });
   const timeText = post?.created_at ? formatRelativeTime(post.created_at) : '';
@@ -452,7 +452,7 @@ function toggleFollowingFiltersVisibility() {
 function buildFollowingAccountChip(account, { active = false } = {}) {
   const fullName = account?.full_name || account?.username || 'User';
   const label = fullName;
-  const avatarUrl = account?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(account, account?.avatar_url);
 
   return `
     <button type="button" class="following-filter-chip ${active ? 'active' : ''}" data-following-id="${escapeHtml(String(account?.id || ''))}" title="${escapeHtml(label)}">
@@ -808,7 +808,7 @@ function initPeopleYouMayKnowActions() {
 function buildSuggestionHtml(user) {
   const fullName = user?.full_name || user?.username || 'User';
   const profileHref = user?.id ? `profile.html?id=${encodeURIComponent(user.id)}` : 'profile.html';
-  const avatarUrl = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(user, user?.avatar_url);
   const isOutgoingPending = !!user?.pending_outgoing;
   const mutualFriends = Number.isFinite(user?.mutual_friends) ? user.mutual_friends : 0;
   const mutualLabel = mutualFriends === 1 ? 'mutual friend' : 'mutual friends';
@@ -844,7 +844,7 @@ function buildSuggestionHtml(user) {
 function buildIncomingRequestHtml(request) {
   const fullName = request?.full_name || request?.username || 'User';
   const profileHref = request?.id ? `profile.html?id=${encodeURIComponent(request.id)}` : 'profile.html';
-  const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+  const avatarUrl = resolveAvatarUrl(request, request?.avatar_url);
 
   return `
     <div class="suggestion-card" data-user-id="${escapeHtml(String(request?.id || ''))}" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
@@ -899,7 +899,7 @@ async function loadNotifications() {
 
     const itemsHtml = requests.map((request) => {
       const fullName = request?.full_name || request?.username || 'User';
-      const avatarUrl = request?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=3B82F6&color=fff`;
+      const avatarUrl = resolveAvatarUrl(request, request?.avatar_url);
       return `
         <li class="px-3 py-2" data-request-id="${escapeHtml(String(request?.request_id || ''))}">
           <div class="d-flex align-items-start gap-2">
@@ -1705,7 +1705,7 @@ function handleComment(button, postId) {
   commentSection.dataset.postId = postId;
 
   const user = getStoredUser();
-  const currentUserAvatarUrl = user?.avatar || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const currentUserAvatarUrl = resolveAvatarUrl(user, user?.avatar);
 
   commentSection.innerHTML = `
     <div class="d-flex gap-2 mb-3">
@@ -1880,7 +1880,7 @@ function buildCommentTree(comments) {
 
 function renderCommentItem(comment, depth, postId) {
   const fullName = comment?.profiles?.full_name || 'User';
-  const avatarUrl = comment?.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff';
+  const avatarUrl = resolveAvatarUrl(comment?.profiles, comment?.profiles?.avatar_url);
   const likesCount = Number.isFinite(comment?.likes_count) ? comment.likes_count : 0;
   const isLiked = !!comment?.liked_by_user;
   const likeIcon = isLiked ? 'bi-heart-fill' : 'bi-heart';
