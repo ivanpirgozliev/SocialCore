@@ -100,9 +100,9 @@
       <!-- Page Header -->
       <div class="d-flex align-items-center justify-content-between mb-4">
         <h2 class="mb-0">
-          <i class="bi bi-pencil-square me-2 text-primary-blue"></i>Edit Profile
+          <i class="bi bi-pencil-square me-2 edit-profile-title-icon"></i>Edit Profile
         </h2>
-        <a href="profile.html" class="btn btn-outline-primary" style="background-color: white;">
+        <a href="profile.html" class="btn btn-outline-theme">
           <i class="bi bi-arrow-left me-1"></i>Back to Profile
         </a>
       </div>
@@ -114,23 +114,23 @@
             <!-- Profile Picture Card -->
             <div class="card mb-4">
               <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-camera me-2"></i>Profile Picture</h5>
+                <h5 class="mb-0"><i class="bi bi-camera me-2 edit-profile-section-icon"></i>Profile Picture</h5>
               </div>
               <div class="card-body text-center">
                 <div class="position-relative d-inline-block mb-3">
                    <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=150" 
                      alt="Profile Picture" class="rounded-circle" width="150" height="150" id="profilePicturePreview" loading="lazy">
-                  <label class="btn btn-primary-gradient btn-sm position-absolute bottom-0 end-0 rounded-circle p-2" 
+                  <label class="btn btn-theme btn-sm position-absolute bottom-0 end-0 rounded-circle p-2" 
                          style="cursor: pointer;">
                     <i class="bi bi-camera"></i>
                     <input type="file" class="d-none" id="profilePictureInput" accept="image/*">
                   </label>
                 </div>
                 <div class="d-grid gap-2 mx-auto" style="max-width: 240px;">
-                  <button type="button" class="btn btn-primary-gradient btn-sm w-100" onclick="document.getElementById('profilePictureInput').click()">
+                  <button type="button" class="btn btn-theme btn-sm w-100" onclick="document.getElementById('profilePictureInput').click()">
                     <i class="bi bi-cloud-arrow-up me-2"></i>Upload New Photo
                   </button>
-                  <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-semibold">
+                  <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-semibold" id="removeProfilePhotoBtn">
                     <i class="bi bi-trash3 me-2"></i>Remove Photo
                   </button>
                 </div>
@@ -162,7 +162,7 @@
             <!-- Basic Information -->
             <div class="card mb-4">
               <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Basic Information</h5>
+                <h5 class="mb-0"><i class="bi bi-person-badge me-2 edit-profile-section-icon"></i>Basic Information</h5>
               </div>
               <div class="card-body">
                 <!-- Name Fields -->
@@ -202,9 +202,21 @@
                 <div class="mb-3">
                   <label for="birthday" class="form-label">Birthday</label>
                   <div class="birthday-picker" id="birthdayPicker">
-                    <select class="form-select" id="birthdayDay" name="birthdayDay" aria-label="Day"></select>
-                    <select class="form-select" id="birthdayMonth" name="birthdayMonth" aria-label="Month"></select>
-                    <select class="form-select" id="birthdayYear" name="birthdayYear" aria-label="Year"></select>
+                    <input type="hidden" id="birthdayDay" name="birthdayDay" aria-label="Day" value="">
+                    <div class="dropdown themed-select-dropdown">
+                      <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="birthdayDayToggle" data-bs-toggle="dropdown" aria-expanded="false">Day</button>
+                      <ul class="dropdown-menu w-100 themed-select-menu" id="birthdayDayMenu" aria-labelledby="birthdayDayToggle"></ul>
+                    </div>
+                    <input type="hidden" id="birthdayMonth" name="birthdayMonth" aria-label="Month" value="">
+                    <div class="dropdown themed-select-dropdown">
+                      <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="birthdayMonthToggle" data-bs-toggle="dropdown" aria-expanded="false">Month</button>
+                      <ul class="dropdown-menu w-100 themed-select-menu" id="birthdayMonthMenu" aria-labelledby="birthdayMonthToggle"></ul>
+                    </div>
+                    <input type="hidden" id="birthdayYear" name="birthdayYear" aria-label="Year" value="">
+                    <div class="dropdown themed-select-dropdown">
+                      <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="birthdayYearToggle" data-bs-toggle="dropdown" aria-expanded="false">Year</button>
+                      <ul class="dropdown-menu w-100 themed-select-menu" id="birthdayYearMenu" aria-labelledby="birthdayYearToggle"></ul>
+                    </div>
                   </div>
                   <div class="form-text">Format: DD MMM YYYY</div>
                 </div>
@@ -303,14 +315,20 @@
                 <h5 class="mb-0"><i class="bi bi-heart me-2"></i>Relationship Status</h5>
               </div>
               <div class="card-body">
-                <select class="form-select" id="relationship" name="relationship">
-                  <option value="">Prefer not to say</option>
-                  <option value="single" selected>Single</option>
-                  <option value="in-relationship">In a Relationship</option>
-                  <option value="engaged">Engaged</option>
-                  <option value="married">Married</option>
-                  <option value="complicated">It's Complicated</option>
-                </select>
+                <input type="hidden" id="relationship" name="relationship" value="single">
+                <div class="dropdown themed-select-dropdown">
+                  <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="relationshipToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Single
+                  </button>
+                  <ul class="dropdown-menu w-100 themed-select-menu" id="relationshipMenu" aria-labelledby="relationshipToggle">
+                    <li><button type="button" class="dropdown-item" data-select-value="">Prefer not to say</button></li>
+                    <li><button type="button" class="dropdown-item active" data-select-value="single">Single</button></li>
+                    <li><button type="button" class="dropdown-item" data-select-value="in-relationship">In a Relationship</button></li>
+                    <li><button type="button" class="dropdown-item" data-select-value="engaged">Engaged</button></li>
+                    <li><button type="button" class="dropdown-item" data-select-value="married">Married</button></li>
+                    <li><button type="button" class="dropdown-item" data-select-value="complicated">It's Complicated</button></li>
+                  </ul>
+                </div>
               </div>
             </div>
             
@@ -373,11 +391,11 @@
             </div>
             
             <!-- Action Buttons -->
-            <div class="d-flex justify-content-end gap-2">
-              <a href="profile.html" class="btn btn-outline-primary" style="background-color: white;">
+            <div class="d-flex justify-content-end gap-2 edit-profile-actions">
+              <a href="profile.html" class="btn btn-outline-theme">
                 <i class="bi bi-x-lg me-1"></i>Cancel
               </a>
-              <button type="submit" class="btn btn-primary-gradient">
+              <button type="submit" class="btn btn-theme">
                 <i class="bi bi-check-lg me-1"></i>Save Changes
               </button>
             </div>

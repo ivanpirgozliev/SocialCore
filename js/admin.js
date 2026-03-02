@@ -40,6 +40,12 @@ const usersPagination = document.getElementById('usersPagination');
 const userSearchInput = document.getElementById('userSearch');
 const roleFilterToggle = document.getElementById('roleFilterToggle');
 const roleFilterMenu = document.getElementById('roleFilterMenu');
+const addUserRoleInput = document.getElementById('addUserRole');
+const addUserRoleToggle = document.getElementById('addUserRoleToggle');
+const addUserRoleMenu = document.getElementById('addUserRoleMenu');
+const editUserRoleInput = document.getElementById('editUserRole');
+const editUserRoleToggle = document.getElementById('editUserRoleToggle');
+const editUserRoleMenu = document.getElementById('editUserRoleMenu');
 
 // Add User Modal elements
 const addUserSubmitBtn = document.getElementById('addUserSubmitBtn');
@@ -291,7 +297,10 @@ function attachUserActionListeners() {
       document.getElementById('editUserName').value = btn.dataset.fullName;
       document.getElementById('editUserUsername').value = btn.dataset.username;
       document.getElementById('editUserEmail').value = btn.dataset.email;
-      document.getElementById('editUserRole').value = btn.dataset.role;
+      if (editUserRoleInput) {
+        editUserRoleInput.value = btn.dataset.role || 'user';
+        syncRoleDropdownState(editUserRoleInput, editUserRoleToggle, editUserRoleMenu);
+      }
       const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
       modal.show();
     });
@@ -382,6 +391,35 @@ function attachPostActionListeners() {
       modal.show();
     });
   });
+}
+
+function formatRoleLabel(roleValue) {
+  return roleValue === 'admin' ? 'Admin' : 'User';
+}
+
+function syncRoleDropdownState(roleInput, roleToggle, roleMenu) {
+  if (!roleInput || !roleToggle || !roleMenu) return;
+
+  const currentValue = roleInput.value || 'user';
+  roleToggle.textContent = formatRoleLabel(currentValue);
+
+  roleMenu.querySelectorAll('[data-role-value]').forEach((item) => {
+    item.classList.toggle('active', item.getAttribute('data-role-value') === currentValue);
+  });
+}
+
+function setupRoleDropdown(roleInput, roleToggle, roleMenu) {
+  if (!roleInput || !roleToggle || !roleMenu) return;
+
+  roleMenu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-role-value]');
+    if (!selectedItem) return;
+
+    roleInput.value = selectedItem.getAttribute('data-role-value') || 'user';
+    syncRoleDropdownState(roleInput, roleToggle, roleMenu);
+  });
+
+  syncRoleDropdownState(roleInput, roleToggle, roleMenu);
 }
 
 // ============================================
@@ -567,6 +605,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Add user button
   if (addUserSubmitBtn) {
     addUserSubmitBtn.addEventListener('click', handleAddUser);
+  }
+
+  setupRoleDropdown(addUserRoleInput, addUserRoleToggle, addUserRoleMenu);
+  setupRoleDropdown(editUserRoleInput, editUserRoleToggle, editUserRoleMenu);
+
+  const addUserModalEl = document.getElementById('addUserModal');
+  if (addUserModalEl) {
+    addUserModalEl.addEventListener('hidden.bs.modal', () => {
+      if (document.getElementById('addUserForm')) {
+        document.getElementById('addUserForm').reset();
+      }
+      if (addUserRoleInput) {
+        addUserRoleInput.value = 'user';
+      }
+      syncRoleDropdownState(addUserRoleInput, addUserRoleToggle, addUserRoleMenu);
+    });
   }
 
   // Edit user button

@@ -321,10 +321,16 @@
             </div>
             <div class="mb-3">
               <label for="addUserRole" class="form-label">Role</label>
-              <select class="form-select" id="addUserRole">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
+              <input type="hidden" id="addUserRole" value="user">
+              <div class="dropdown role-select-dropdown">
+                <button class="btn btn-outline-theme dropdown-toggle w-100 text-start role-select-toggle" type="button" id="addUserRoleToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  User
+                </button>
+                <ul class="dropdown-menu w-100 role-select-menu" id="addUserRoleMenu" aria-labelledby="addUserRoleToggle">
+                  <li><button type="button" class="dropdown-item active" data-role-value="user">User</button></li>
+                  <li><button type="button" class="dropdown-item" data-role-value="admin">Admin</button></li>
+                </ul>
+              </div>
             </div>
           </form>
         </div>
@@ -367,10 +373,16 @@
             </div>
             <div class="mb-3">
               <label for="editUserRole" class="form-label">Role</label>
-              <select class="form-select" id="editUserRole">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
+              <input type="hidden" id="editUserRole" value="user">
+              <div class="dropdown role-select-dropdown">
+                <button class="btn btn-outline-theme dropdown-toggle w-100 text-start role-select-toggle" type="button" id="editUserRoleToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  User
+                </button>
+                <ul class="dropdown-menu w-100 role-select-menu" id="editUserRoleMenu" aria-labelledby="editUserRoleToggle">
+                  <li><button type="button" class="dropdown-item active" data-role-value="user">User</button></li>
+                  <li><button type="button" class="dropdown-item" data-role-value="admin">Admin</button></li>
+                </ul>
+              </div>
             </div>
           </form>
         </div>

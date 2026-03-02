@@ -5,6 +5,37 @@
 
 import { showToast } from './main.js';
 
+function setupThemedSelect(inputId, toggleId, menuId) {
+  const input = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
+
+  if (!input || !toggle || !menu) return;
+
+  const sync = () => {
+    const value = input.value;
+    const activeItem = menu.querySelector(`[data-select-value="${value}"]`);
+
+    if (activeItem) {
+      toggle.textContent = activeItem.textContent?.trim() || '';
+    }
+
+    menu.querySelectorAll('[data-select-value]').forEach((item) => {
+      item.classList.toggle('active', item.getAttribute('data-select-value') === value);
+    });
+  };
+
+  menu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-select-value]');
+    if (!selectedItem) return;
+
+    input.value = selectedItem.getAttribute('data-select-value') || '';
+    sync();
+  });
+
+  sync();
+}
+
 // ============================================
 // Password Toggle Visibility
 // ============================================
@@ -123,5 +154,9 @@ forms.forEach(formId => {
     });
   }
 });
+
+setupThemedSelect('profileVisibility', 'profileVisibilityToggle', 'profileVisibilityMenu');
+setupThemedSelect('postVisibility', 'postVisibilityToggle', 'postVisibilityMenu');
+setupThemedSelect('language', 'languageToggle', 'languageMenu');
 
 // Uses shared `showToast()` from main.js

@@ -274,19 +274,31 @@
                   <div class="card-body">
                     <div class="mb-3">
                       <label for="profileVisibility" class="form-label">Who can see your profile?</label>
-                      <select class="form-select" id="profileVisibility" name="profileVisibility">
-                        <option value="everyone" selected>Everyone</option>
-                        <option value="friends">Friends Only</option>
-                        <option value="private">Only Me</option>
-                      </select>
+                      <input type="hidden" id="profileVisibility" name="profileVisibility" value="everyone">
+                      <div class="dropdown themed-select-dropdown">
+                        <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="profileVisibilityToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                          Everyone
+                        </button>
+                        <ul class="dropdown-menu w-100 themed-select-menu" id="profileVisibilityMenu" aria-labelledby="profileVisibilityToggle">
+                          <li><button type="button" class="dropdown-item active" data-select-value="everyone">Everyone</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="friends">Friends Only</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="private">Only Me</button></li>
+                        </ul>
+                      </div>
                     </div>
                     <div class="mb-0">
                       <label for="postVisibility" class="form-label">Default post visibility</label>
-                      <select class="form-select" id="postVisibility" name="postVisibility">
-                        <option value="public" selected>Public</option>
-                        <option value="friends">Friends Only</option>
-                        <option value="private">Only Me</option>
-                      </select>
+                      <input type="hidden" id="postVisibility" name="postVisibility" value="public">
+                      <div class="dropdown themed-select-dropdown">
+                        <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="postVisibilityToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                          Public
+                        </button>
+                        <ul class="dropdown-menu w-100 themed-select-menu" id="postVisibilityMenu" aria-labelledby="postVisibilityToggle">
+                          <li><button type="button" class="dropdown-item active" data-select-value="public">Public</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="friends">Friends Only</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="private">Only Me</button></li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -547,13 +559,19 @@
                     <h5 class="mb-0"><i class="bi bi-translate me-2"></i>Language</h5>
                   </div>
                   <div class="card-body">
-                    <select class="form-select" id="language" name="language">
-                      <option value="en" selected>English</option>
-                      <option value="bg">Български</option>
-                      <option value="de">Deutsch</option>
-                      <option value="es">Español</option>
-                      <option value="fr">Français</option>
-                    </select>
+                      <input type="hidden" id="language" name="language" value="en">
+                      <div class="dropdown themed-select-dropdown">
+                        <button class="btn btn-outline-theme dropdown-toggle w-100 text-start themed-select-toggle" type="button" id="languageToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                          English
+                        </button>
+                        <ul class="dropdown-menu w-100 themed-select-menu" id="languageMenu" aria-labelledby="languageToggle">
+                          <li><button type="button" class="dropdown-item active" data-select-value="en">English</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="bg">Български</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="de">Deutsch</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="es">Español</button></li>
+                          <li><button type="button" class="dropdown-item" data-select-value="fr">Français</button></li>
+                        </ul>
+                      </div>
                   </div>
                 </div>
                 

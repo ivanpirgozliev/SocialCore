@@ -303,17 +303,21 @@ function initMobileXNavigation() {
   const brandLink = navbar.querySelector('.navbar-brand');
   const brandImg = brandLink?.querySelector('img');
   const brandHref = brandLink?.getAttribute('href') || resolvePageHref('feed');
+  const brandLabel = (brandLink?.textContent || 'SocialCore').replace(/\s+/g, ' ').trim() || 'SocialCore';
 
   const topbar = document.createElement('div');
   topbar.className = 'mobile-topbar';
   topbar.innerHTML = `
+    <button type="button" class="btn mobile-topbar-menu-btn" aria-label="Open menu" aria-controls="mobileSideDrawer" aria-expanded="false">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="mobile-topbar-logo" href="${escapeHtml(brandHref)}" aria-label="Home">
+      ${brandImg ? `<img src="${escapeHtml(brandImg.getAttribute('src') || '')}" alt="Logo" height="30">` : ''}
+      <span class="mobile-topbar-logo-text">${escapeHtml(brandLabel)}</span>
+    </a>
     <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-topbar-avatar-link" aria-label="Open profile">
       <img src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff" alt="Profile" class="js-navbar-avatar" width="36" height="36" loading="lazy">
     </a>
-    <a class="mobile-topbar-logo" href="${escapeHtml(brandHref)}" aria-label="Home">
-      ${brandImg ? `<img src="${escapeHtml(brandImg.getAttribute('src') || '')}" alt="Logo" height="30">` : '<span>SocialCore</span>'}
-    </a>
-    <span class="mobile-topbar-spacer" aria-hidden="true"></span>
   `;
 
   navbarContainer.appendChild(topbar);
@@ -380,6 +384,8 @@ function initMobileXNavigation() {
 
   document.body.appendChild(drawer);
 
+  const menuButton = topbar.querySelector('.mobile-topbar-menu-btn');
+
   initNavbarUserAvatar();
   initLogoutActions();
 
@@ -387,6 +393,7 @@ function initMobileXNavigation() {
     drawer.classList.add('is-open');
     drawerBackdrop.classList.add('is-visible');
     drawer.setAttribute('aria-hidden', 'false');
+    menuButton?.setAttribute('aria-expanded', 'true');
     document.body.classList.add('mobile-drawer-open');
   };
 
@@ -394,10 +401,31 @@ function initMobileXNavigation() {
     drawer.classList.remove('is-open');
     drawerBackdrop.classList.remove('is-visible');
     drawer.setAttribute('aria-hidden', 'true');
+    menuButton?.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('mobile-drawer-open');
   };
 
+  menuButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (drawer.classList.contains('is-open')) {
+      closeDrawer();
+      return;
+    }
+
+    openDrawer();
+  });
+
   drawerBackdrop.addEventListener('click', closeDrawer);
+
+  document.addEventListener('click', (event) => {
+    if (!drawer.classList.contains('is-open')) return;
+
+    const clickedInsideDrawer = Boolean(event.target.closest('#mobileSideDrawer'));
+    const clickedMenuButton = Boolean(event.target.closest('.mobile-topbar-menu-btn'));
+    if (clickedInsideDrawer || clickedMenuButton) return;
+
+    closeDrawer();
+  });
 
   drawer.addEventListener('click', (event) => {
     const link = event.target.closest('a.mobile-drawer-link, a.mobile-drawer-profile-link');
@@ -411,43 +439,6 @@ function initMobileXNavigation() {
       closeDrawer();
     }
   });
-
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchingDrawer = false;
-
-  document.addEventListener('touchstart', (event) => {
-    const touch = event.changedTouches?.[0];
-    if (!touch) return;
-
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchingDrawer = Boolean(event.target.closest('.mobile-side-drawer'));
-  }, { passive: true });
-
-  document.addEventListener('touchend', (event) => {
-    const touch = event.changedTouches?.[0];
-    if (!touch) return;
-
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    const isHorizontalGesture = Math.abs(deltaX) > Math.abs(deltaY);
-
-    if (!isHorizontalGesture) return;
-
-    const startsNearLeftEdge = touchStartX <= 24;
-    const swipeRightToOpen = deltaX > 70;
-    const swipeLeftToClose = deltaX < -70;
-
-    if (!drawer.classList.contains('is-open') && startsNearLeftEdge && swipeRightToOpen) {
-      openDrawer();
-      return;
-    }
-
-    if (drawer.classList.contains('is-open') && touchingDrawer && swipeLeftToClose) {
-      closeDrawer();
-    }
-  }, { passive: true });
 
   bottomNav.addEventListener('click', (event) => {
     const actionLink = event.target.closest('[data-mobile-action]');

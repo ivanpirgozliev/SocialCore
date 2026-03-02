@@ -6,10 +6,50 @@
 import { showToast } from './main.js';
 import { getProfile, updateProfile, uploadProfileImage } from './database.js';
 
+let refreshBirthdayDayMenu = () => {};
+let removeProfilePhotoRequested = false;
+
+function syncThemedSelect(inputId, toggleId, menuId) {
+  const input = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
+
+  if (!input || !toggle || !menu) return;
+
+  const value = input.value || '';
+  const activeItem = menu.querySelector(`[data-select-value="${value}"]`);
+
+  if (activeItem) {
+    toggle.textContent = activeItem.textContent?.trim() || '';
+  }
+
+  menu.querySelectorAll('[data-select-value]').forEach((item) => {
+    item.classList.toggle('active', item.getAttribute('data-select-value') === value);
+  });
+}
+
+function setupThemedSelect(inputId, toggleId, menuId) {
+  const input = document.getElementById(inputId);
+  const menu = document.getElementById(menuId);
+
+  if (!input || !menu) return;
+
+  menu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-select-value]');
+    if (!selectedItem) return;
+
+    input.value = selectedItem.getAttribute('data-select-value') || '';
+    syncThemedSelect(inputId, toggleId, menuId);
+  });
+
+  syncThemedSelect(inputId, toggleId, menuId);
+}
+
 // ============================================
 // Load Profile Data on Page Load
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
+  setupThemedSelect('relationship', 'relationshipToggle', 'relationshipMenu');
   initBirthdayPicker();
   await loadProfileData();
   initCharacterCounter();
@@ -71,6 +111,7 @@ async function loadProfileData() {
     // Relationship
     if (document.getElementById('relationship') && profile?.relationship) {
       document.getElementById('relationship').value = profile.relationship;
+      syncThemedSelect('relationship', 'relationshipToggle', 'relationshipMenu');
     }
     
     // Social Links
@@ -118,59 +159,100 @@ async function loadProfileData() {
 // Birthday Picker
 // ============================================
 function initBirthdayPicker() {
-  const daySelect = document.getElementById('birthdayDay');
-  const monthSelect = document.getElementById('birthdayMonth');
-  const yearSelect = document.getElementById('birthdayYear');
+  const dayInput = document.getElementById('birthdayDay');
+  const monthInput = document.getElementById('birthdayMonth');
+  const yearInput = document.getElementById('birthdayYear');
+  const dayMenu = document.getElementById('birthdayDayMenu');
+  const monthMenu = document.getElementById('birthdayMonthMenu');
+  const yearMenu = document.getElementById('birthdayYearMenu');
 
-  if (!daySelect || !monthSelect || !yearSelect) return;
+  if (!dayInput || !monthInput || !yearInput || !dayMenu || !monthMenu || !yearMenu) return;
 
-  monthSelect.innerHTML = buildPlaceholderOption('Month') + buildMonthOptions();
-  yearSelect.innerHTML = buildPlaceholderOption('Year') + buildYearOptions();
-  updateDayOptions();
+  renderThemedSelectMenu(monthMenu, [{ value: '', label: 'Month' }, ...buildMonthOptions()]);
+  renderThemedSelectMenu(yearMenu, [{ value: '', label: 'Year' }, ...buildYearOptions()]);
 
-  monthSelect.addEventListener('change', updateDayOptions);
-  yearSelect.addEventListener('change', updateDayOptions);
-
-  function updateDayOptions() {
-    const selectedDay = daySelect.value;
-    const month = parseInt(monthSelect.value, 10);
-    const year = parseInt(yearSelect.value, 10);
+  const updateDayOptions = () => {
+    const selectedDay = dayInput.value;
+    const month = parseInt(monthInput.value, 10);
+    const year = parseInt(yearInput.value, 10);
     const daysInMonth = getDaysInMonth(year, month);
 
-    daySelect.innerHTML = buildPlaceholderOption('Day') + buildDayOptions(daysInMonth);
-    if (selectedDay) {
-      daySelect.value = selectedDay;
+    renderThemedSelectMenu(dayMenu, [{ value: '', label: 'Day' }, ...buildDayOptions(daysInMonth)]);
+
+    if (selectedDay && parseInt(selectedDay, 10) <= daysInMonth) {
+      dayInput.value = selectedDay;
+    } else {
+      dayInput.value = '';
     }
-  }
+
+    syncThemedSelect('birthdayDay', 'birthdayDayToggle', 'birthdayDayMenu');
+  };
+
+  refreshBirthdayDayMenu = updateDayOptions;
+
+  monthMenu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-select-value]');
+    if (!selectedItem) return;
+
+    monthInput.value = selectedItem.getAttribute('data-select-value') || '';
+    syncThemedSelect('birthdayMonth', 'birthdayMonthToggle', 'birthdayMonthMenu');
+    updateDayOptions();
+  });
+
+  yearMenu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-select-value]');
+    if (!selectedItem) return;
+
+    yearInput.value = selectedItem.getAttribute('data-select-value') || '';
+    syncThemedSelect('birthdayYear', 'birthdayYearToggle', 'birthdayYearMenu');
+    updateDayOptions();
+  });
+
+  dayMenu.addEventListener('click', (event) => {
+    const selectedItem = event.target.closest('[data-select-value]');
+    if (!selectedItem) return;
+
+    dayInput.value = selectedItem.getAttribute('data-select-value') || '';
+    syncThemedSelect('birthdayDay', 'birthdayDayToggle', 'birthdayDayMenu');
+  });
+
+  syncThemedSelect('birthdayMonth', 'birthdayMonthToggle', 'birthdayMonthMenu');
+  syncThemedSelect('birthdayYear', 'birthdayYearToggle', 'birthdayYearMenu');
+  updateDayOptions();
 }
 
-function buildPlaceholderOption(label) {
-  return `<option value="">${label}</option>`;
+function renderThemedSelectMenu(menuElement, options) {
+  menuElement.innerHTML = options.map(({ value, label }) => `
+    <li><button type="button" class="dropdown-item" data-select-value="${value}">${label}</button></li>
+  `).join('');
 }
 
 function buildDayOptions(count) {
-  let options = '';
+  const options = [];
   for (let day = 1; day <= count; day++) {
-    options += `<option value="${day}">${String(day).padStart(2, '0')}</option>`;
+    options.push({
+      value: String(day),
+      label: String(day).padStart(2, '0')
+    });
   }
   return options;
 }
 
 function buildMonthOptions() {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return months.map((label, index) => {
-    const value = index + 1;
-    return `<option value="${value}">${label}</option>`;
-  }).join('');
+  return months.map((label, index) => ({
+    value: String(index + 1),
+    label,
+  }));
 }
 
 function buildYearOptions() {
   const currentYear = new Date().getFullYear();
   const startYear = currentYear - 110;
   const endYear = currentYear - 10;
-  let options = '';
+  const options = [];
   for (let year = endYear; year >= startYear; year--) {
-    options += `<option value="${year}">${year}</option>`;
+    options.push({ value: String(year), label: String(year) });
   }
   return options;
 }
@@ -181,11 +263,11 @@ function getDaysInMonth(year, month) {
 }
 
 function setBirthdayPickerValue(isoDate) {
-  const daySelect = document.getElementById('birthdayDay');
-  const monthSelect = document.getElementById('birthdayMonth');
-  const yearSelect = document.getElementById('birthdayYear');
+  const dayInput = document.getElementById('birthdayDay');
+  const monthInput = document.getElementById('birthdayMonth');
+  const yearInput = document.getElementById('birthdayYear');
 
-  if (!daySelect || !monthSelect || !yearSelect) return;
+  if (!dayInput || !monthInput || !yearInput) return;
 
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return;
@@ -194,11 +276,14 @@ function setBirthdayPickerValue(isoDate) {
   const month = parsed.getMonth() + 1;
   const day = parsed.getDate();
 
-  monthSelect.value = String(month);
-  yearSelect.value = String(year);
-  const daysInMonth = getDaysInMonth(year, month);
-  daySelect.innerHTML = buildPlaceholderOption('Day') + buildDayOptions(daysInMonth);
-  daySelect.value = String(day);
+  monthInput.value = String(month);
+  yearInput.value = String(year);
+  syncThemedSelect('birthdayMonth', 'birthdayMonthToggle', 'birthdayMonthMenu');
+  syncThemedSelect('birthdayYear', 'birthdayYearToggle', 'birthdayYearMenu');
+
+  refreshBirthdayDayMenu();
+  dayInput.value = String(day);
+  syncThemedSelect('birthdayDay', 'birthdayDayToggle', 'birthdayDayMenu');
 }
 
 // ============================================
@@ -222,6 +307,15 @@ function initCharacterCounter() {
 function initImagePreviews() {
   const profilePictureInput = document.getElementById('profilePictureInput');
   const profilePicturePreview = document.getElementById('profilePicturePreview');
+  const removeProfilePhotoBtn = document.getElementById('removeProfilePhotoBtn');
+
+  const getDefaultAvatarUrl = () => {
+    const firstName = document.getElementById('firstName')?.value?.trim() || '';
+    const lastName = document.getElementById('lastName')?.value?.trim() || '';
+    const username = document.getElementById('username')?.value?.trim() || '';
+    const displayName = `${firstName} ${lastName}`.trim() || username || 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6a5e56&color=fff&size=150`;
+  };
 
 if (profilePictureInput && profilePicturePreview) {
   profilePictureInput.addEventListener('change', (e) => {
@@ -247,9 +341,19 @@ if (profilePictureInput && profilePicturePreview) {
         profilePicturePreview.src = e.target.result;
       };
       reader.readAsDataURL(file);
+      removeProfilePhotoRequested = false;
     }
   });
 }
+
+  if (removeProfilePhotoBtn && profilePictureInput && profilePicturePreview) {
+    removeProfilePhotoBtn.addEventListener('click', () => {
+      profilePictureInput.value = '';
+      profilePicturePreview.src = getDefaultAvatarUrl();
+      removeProfilePhotoRequested = true;
+      showToast('Photo will be removed after saving changes.', 'info');
+    });
+  }
 
 // ============================================
 // Cover Photo Preview
@@ -354,6 +458,7 @@ function initFormSubmit() {
         if (profilePictureInput?.files[0]) {
           showToast('Uploading profile picture...', 'info');
           avatarUrl = await uploadProfileImage(profilePictureInput.files[0], 'avatar');
+          removeProfilePhotoRequested = false;
         }
         
         // Upload cover photo if changed
@@ -388,6 +493,7 @@ function initFormSubmit() {
         
         // Add image URLs if uploaded
         if (avatarUrl) profileData.avatar_url = avatarUrl;
+        if (!avatarUrl && removeProfilePhotoRequested) profileData.avatar_url = null;
         if (coverUrl) profileData.cover_photo_url = coverUrl;
         
         // Update profile
@@ -397,7 +503,9 @@ function initFormSubmit() {
         userData.name = profileData.full_name;
         userData.username = profileData.username;
         if (avatarUrl) userData.avatar = avatarUrl;
+        if (!avatarUrl && removeProfilePhotoRequested) delete userData.avatar;
         localStorage.setItem('socialcore_user', JSON.stringify(userData));
+        removeProfilePhotoRequested = false;
         
         // Show success message
         showToast('Profile updated successfully!', 'success');

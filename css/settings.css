@@ -27,3 +27,17 @@
 	box-shadow: none !important;
 }
 
+.themed-select-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.themed-select-menu .dropdown-item:hover,
+.themed-select-menu .dropdown-item:focus,
+.themed-select-menu .dropdown-item.active,
+.themed-select-menu .dropdown-item:active {
+	background-color: var(--text-primary);
+	color: #ffffff;
+}
+

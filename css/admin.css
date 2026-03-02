@@ -31,8 +31,18 @@
 .role-filter-menu .dropdown-item:hover,
 .role-filter-menu .dropdown-item:focus,
 .role-filter-menu .dropdown-item.active,
-.role-filter-menu .dropdown-item:active {
+.role-filter-menu .dropdown-item:active,
+.role-select-menu .dropdown-item:hover,
+.role-select-menu .dropdown-item:focus,
+.role-select-menu .dropdown-item.active,
+.role-select-menu .dropdown-item:active {
 	background-color: var(--text-primary);
 	color: #ffffff;
+}
+
+.role-select-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 }
 

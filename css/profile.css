@@ -54,3 +54,13 @@
 	}
 }
 
+@media (max-width: 575.98px) {
+	body.mobile-x-ui .profile-stats {
+		display: flex !important;
+		flex-direction: row !important;
+		justify-content: center;
+		align-items: center;
+		gap: var(--spacing-lg);
+	}
+}
+
