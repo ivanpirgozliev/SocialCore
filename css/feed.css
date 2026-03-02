@@ -55,14 +55,17 @@
 	text-decoration: none !important;
 }
 
-#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"] {
+#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"],
+#peopleYouMayKnowList [data-action="accept-request"] {
 	background: #6a5e56 !important;
 	border-color: #6a5e56 !important;
 	color: #ffffff !important;
 }
 
 #peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"]:hover,
-#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"]:focus {
+#peopleYouMayKnowList .suggestion-action[data-action="add-friend"][data-state="none"]:focus,
+#peopleYouMayKnowList [data-action="accept-request"]:hover,
+#peopleYouMayKnowList [data-action="accept-request"]:focus {
 	background: #6a5e56 !important;
 	border-color: #6a5e56 !important;
 	color: #ffffff !important;

@@ -4,3 +4,35 @@
 @import url('./sections/enhancements.css');
 @import url('./styles.css');
 
+.user-management-search .input-group-text,
+.user-management-search .form-control {
+	background-color: #ffffff;
+}
+
+.user-management-search:hover .input-group-text,
+.user-management-search:hover .form-control {
+	border-color: var(--gray-300);
+}
+
+.user-management-search:focus-within .input-group-text {
+	background-color: #ffffff;
+}
+
+.user-management-search .form-control:focus {
+	box-shadow: none;
+}
+
+.role-filter-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.role-filter-menu .dropdown-item:hover,
+.role-filter-menu .dropdown-item:focus,
+.role-filter-menu .dropdown-item.active,
+.role-filter-menu .dropdown-item:active {
+	background-color: var(--text-primary);
+	color: #ffffff;
+}
+

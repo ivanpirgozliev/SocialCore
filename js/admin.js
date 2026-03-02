@@ -38,7 +38,8 @@ const postsTableBody = document.getElementById('postsTableBody');
 const usersPaginationInfo = document.getElementById('usersPaginationInfo');
 const usersPagination = document.getElementById('usersPagination');
 const userSearchInput = document.getElementById('userSearch');
-const roleFilter = document.getElementById('roleFilter');
+const roleFilterToggle = document.getElementById('roleFilterToggle');
+const roleFilterMenu = document.getElementById('roleFilterMenu');
 
 // Add User Modal elements
 const addUserSubmitBtn = document.getElementById('addUserSubmitBtn');
@@ -219,7 +220,7 @@ function createUserRow(user) {
       <td>${joinedDate}</td>
       <td class="text-end pe-4">
         <div class="btn-group btn-group-sm">
-          <button type="button" class="btn btn-outline-primary btn-edit-user" title="Edit User"
+            <button type="button" class="btn btn-outline-theme btn-edit-user" title="Edit User"
                   data-user-id="${user.id}"
                   data-full-name="${user.full_name || ''}"
                   data-username="${user.username || ''}"
@@ -545,9 +546,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Role filter
-  if (roleFilter) {
-    roleFilter.addEventListener('change', () => {
-      currentRoleFilter = roleFilter.value;
+  if (roleFilterMenu && roleFilterToggle) {
+    roleFilterMenu.addEventListener('click', (event) => {
+      const selectedItem = event.target.closest('[data-role-value]');
+      if (!selectedItem) return;
+
+      currentRoleFilter = selectedItem.getAttribute('data-role-value') || '';
+      roleFilterToggle.textContent = selectedItem.textContent?.trim() || 'All Roles';
+
+      roleFilterMenu.querySelectorAll('[data-role-value]').forEach((item) => {
+        item.classList.remove('active');
+      });
+      selectedItem.classList.add('active');
+
       currentPage = 1;
       renderUsersTable();
     });

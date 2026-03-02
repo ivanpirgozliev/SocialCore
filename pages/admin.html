@@ -189,18 +189,23 @@
               <i class="bi bi-people me-2 text-primary"></i>User Management
             </h5>
             <div class="d-flex gap-2 flex-wrap">
-              <div class="input-group" style="width: 250px;">
-                <span class="input-group-text bg-white">
+              <div class="input-group user-management-search" style="width: 250px;">
+                <span class="input-group-text bg-white border-end-0">
                   <i class="bi bi-search text-muted"></i>
                 </span>
-                <input type="text" class="form-control" id="userSearch" placeholder="Search users...">
+                <input type="text" class="form-control border-start-0" id="userSearch" placeholder="Search users...">
               </div>
-              <select class="form-select" style="width: 150px;" id="roleFilter">
-                <option value="">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="user">User</option>
-              </select>
-              <button class="btn btn-primary" id="addUserBtn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+              <div class="dropdown role-filter-dropdown" style="width: 150px;">
+                <button class="btn btn-outline-theme dropdown-toggle w-100 text-start role-filter-toggle" type="button" id="roleFilterToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  All Roles
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end w-100 role-filter-menu" id="roleFilterMenu" aria-labelledby="roleFilterToggle">
+                  <li><button type="button" class="dropdown-item active" data-role-value="">All Roles</button></li>
+                  <li><button type="button" class="dropdown-item" data-role-value="admin">Admin</button></li>
+                  <li><button type="button" class="dropdown-item" data-role-value="user">User</button></li>
+                </ul>
+              </div>
+              <button class="btn btn-theme" id="addUserBtn" data-bs-toggle="modal" data-bs-target="#addUserModal">
                 <i class="bi bi-person-plus me-1"></i>Add User
               </button>
             </div>
@@ -325,7 +330,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="addUserSubmitBtn">
+          <button type="button" class="btn btn-theme" id="addUserSubmitBtn">
             <i class="bi bi-person-plus me-1"></i>Create User
           </button>
         </div>
@@ -371,7 +376,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="editUserSubmitBtn">Save Changes</button>
+          <button type="button" class="btn btn-theme" id="editUserSubmitBtn">Save Changes</button>
         </div>
       </div>
     </div>

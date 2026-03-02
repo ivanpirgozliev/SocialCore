@@ -401,7 +401,7 @@ function createFriendCard(person, type) {
         <i class="bi bi-person me-1"></i>View Profile
       </a>
       <small class="text-muted d-block mb-2">${escapeHtml(timeAgo)}</small>
-      <button class="btn btn-primary btn-sm w-100 mb-2 accept-btn" data-request-id="${escapeHtml(String(person?.request_id || ''))}" data-name="${escapeHtml(fullName)}">
+      <button class="btn btn-theme btn-sm w-100 mb-2 accept-btn" data-request-id="${escapeHtml(String(person?.request_id || ''))}" data-name="${escapeHtml(fullName)}">
         <i class="bi bi-check-lg me-1"></i>Accept Friend
       </button>
       <button class="btn btn-outline-secondary btn-sm w-100 decline-btn" data-request-id="${escapeHtml(String(person?.request_id || ''))}" data-name="${escapeHtml(fullName)}">

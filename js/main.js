@@ -740,7 +740,7 @@ export async function refreshNotificationsMenu() {
             <div class="flex-grow-1">
               <div class="small"><strong>${escapeHtml(fullName)}</strong> sent you a friend request</div>
               <div class="d-flex gap-2 mt-2">
-                <button class="btn btn-primary-gradient btn-sm" type="button" data-action="accept-request" data-request-id="${requestId}">Accept</button>
+                <button class="btn btn-theme btn-sm" type="button" data-action="accept-request" data-request-id="${requestId}">Accept</button>
                 <button class="btn btn-outline-secondary btn-sm" type="button" data-action="reject-request" data-request-id="${requestId}">Reject</button>
               </div>
             </div>
