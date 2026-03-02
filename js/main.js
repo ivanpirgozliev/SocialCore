@@ -68,9 +68,7 @@ function initAppAfterAuth() {
     initNavbarUserAvatar();
   });
 
-  if (!isPublicPage()) {
-    initMobileXNavigation();
-  }
+  initMobileXNavigation();
 
   if (!isPublicPage()) {
     initUserSearch();
