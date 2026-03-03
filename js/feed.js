@@ -36,6 +36,10 @@ let feedPostEditorState = {
   isSubmitting: false,
   previewObjectUrl: null,
 };
+let feedCommentsModalState = {
+  modalEl: null,
+  activePostId: null,
+};
 
 const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg';
 
@@ -1792,25 +1796,44 @@ async function handlePostReactionSelect(postId, reactionType, reactionControl = 
   }
 }
 
-/**
- * Handle comment button click
- * @param {HTMLElement} button - Comment button element
- * @param {string} postId - Post ID
- */
-function handleComment(button, postId) {
-  const postCard = button.closest('.post-card');
-  
-  // Check if comment section already exists
-  let commentSection = postCard.querySelector('.comment-section');
-  
-  if (commentSection) {
-    // Toggle visibility
-    commentSection.classList.toggle('d-none');
-    return;
-  }
+function ensureFeedCommentsModal() {
+  if (feedCommentsModalState.modalEl) return feedCommentsModalState.modalEl;
 
-  // Create comment section
-  commentSection = document.createElement('div');
+  const modalEl = document.createElement('div');
+  modalEl.className = 'modal fade comments-modal';
+  modalEl.id = 'feedCommentsModal';
+  modalEl.tabIndex = -1;
+  modalEl.setAttribute('aria-hidden', 'true');
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h5 class="modal-title">Post</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="comments-modal-post-host"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalEl);
+  feedCommentsModalState.modalEl = modalEl;
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    const host = modalEl.querySelector('.comments-modal-post-host');
+    if (host) host.innerHTML = '';
+    feedCommentsModalState.activePostId = null;
+    closeEmojiPicker();
+  });
+
+  return modalEl;
+}
+
+function createFeedCommentSection(postId) {
+  const commentSection = document.createElement('div');
   commentSection.className = 'comment-section p-3 border-top';
   commentSection.dataset.postId = postId;
 
@@ -1823,7 +1846,7 @@ function handleComment(button, postId) {
            alt="Profile" class="rounded-circle" width="35" height="35" loading="lazy">
       <div class="flex-grow-1">
         <div class="input-group">
-          <input type="text" class="form-control" placeholder="Write a comment...">
+          <textarea class="form-control comment-composer-input" rows="2" placeholder="Write a comment..."></textarea>
           <button class="btn btn-primary-gradient" type="button">
             <i class="bi bi-send"></i>
           </button>
@@ -1835,28 +1858,19 @@ function handleComment(button, postId) {
     </div>
   `;
 
-  // Insert after post actions
-  const postActions = postCard.querySelector('.post-actions');
-  postActions.after(commentSection);
-
-  // Attach emoji picker to comment input
   const inputGroup = commentSection.querySelector('.input-group');
-  const commentInput = commentSection.querySelector('input');
+  const commentInput = commentSection.querySelector('.comment-composer-input');
   attachEmojiPicker(inputGroup, commentInput);
 
-  // Focus on input
-  commentSection.querySelector('input').focus();
-
-  // Load existing comments
   loadComments(postId, commentSection);
 
-  // Handle comment submission
   const submitBtn = commentSection.querySelector('button');
-  const input = commentSection.querySelector('input');
+  const input = commentSection.querySelector('.comment-composer-input');
 
   submitBtn.addEventListener('click', () => submitComment(input, postId, commentSection));
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
       submitComment(input, postId, commentSection);
     }
   });
@@ -1913,12 +1927,54 @@ function handleComment(button, postId) {
     }
 
     if (action === 'submit-reply' && commentId) {
-      const replyInput = actionBtn.closest('.comment-reply-form')?.querySelector('input');
+      const replyInput = actionBtn.closest('.comment-reply-form')?.querySelector('.reply-composer-input');
       if (replyInput) {
         submitReply(replyInput, postId, commentId, commentSection);
       }
     }
   });
+
+  return commentSection;
+}
+
+function openFeedCommentsModal(postCard, postId) {
+  if (!postCard || !postId) return;
+
+  const modalEl = ensureFeedCommentsModal();
+  const host = modalEl.querySelector('.comments-modal-post-host');
+  if (!host) return;
+
+  const postClone = postCard.cloneNode(true);
+  postClone.classList.add('comments-modal-post-card');
+  postClone.querySelectorAll('.comment-section').forEach((section) => section.remove());
+
+  const postActions = postClone.querySelector('.post-actions');
+  if (!postActions) return;
+
+  const commentSection = createFeedCommentSection(postId);
+  postActions.after(commentSection);
+
+  host.innerHTML = '';
+  host.appendChild(postClone);
+  feedCommentsModalState.activePostId = postId;
+
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+
+  requestAnimationFrame(() => {
+    commentSection.querySelector('.comment-composer-input')?.focus();
+  });
+}
+
+/**
+ * Handle comment button click
+ * @param {HTMLElement} button - Comment button element
+ * @param {string} postId - Post ID
+ */
+function handleComment(button, postId) {
+  const postCard = button.closest('.post-card');
+  if (!postCard || !postId) return;
+  openFeedCommentsModal(postCard, postId);
 }
 
 async function loadComments(postId, commentSection) {
@@ -1957,13 +2013,7 @@ async function submitComment(input, postId, commentSection) {
     await createComment(postId, commentText, null);
 
     input.value = '';
-
-    // Update comment count
-    const postCard = commentSection.closest('.post-card');
-    const commentBtn = postCard.querySelector('[data-action="comment"] span');
-    if (commentBtn) {
-      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
-    }
+    updatePostCommentCount(postId, 1);
 
     await loadComments(postId, commentSection);
   } catch (error) {
@@ -2008,6 +2058,7 @@ function renderCommentItem(comment, depth, postId) {
   const margin = Math.min(depth, 6) * 16;
   const replyCount = countReplies(comment);
   const replyLabel = replyCount === 1 ? 'reply' : 'replies';
+  const hasReplies = replyCount > 0;
   const manageActions = canManageComment(comment)
     ? `
       <button class="comment-action-btn" data-action="edit-comment" data-comment-id="${safeId}">Edit</button>
@@ -2037,11 +2088,11 @@ function renderCommentItem(comment, depth, postId) {
             })}
             <button class="comment-action-btn" data-action="reply-comment" data-comment-id="${safeId}">Reply</button>
             ${manageActions}
-            ${replyCount ? `<span class="comment-reply-count comment-toggle-replies" data-comment-id="${safeId}">${replyCount} ${replyLabel}</span>` : ''}
           </div>
         </div>
       </div>
-      ${repliesHtml ? `<div class="comment-replies">${repliesHtml}</div>` : ''}
+      ${hasReplies ? `<button class="comment-toggle-replies comment-replies-inline-toggle" type="button" data-comment-id="${safeId}" data-reply-count="${replyCount}" aria-expanded="false">View ${replyCount} ${replyLabel}</button>` : ''}
+      ${repliesHtml ? `<div class="comment-replies d-none">${repliesHtml}</div>` : ''}
     </div>
   `;
 }
@@ -2065,7 +2116,7 @@ function toggleReplyForm(commentItem, postId, parentCommentId) {
   replyForm.className = 'comment-reply-form mt-2';
   replyForm.innerHTML = `
     <div class="input-group input-group-sm">
-      <input type="text" class="form-control" placeholder="Write a reply...">
+      <textarea class="form-control reply-composer-input" rows="2" placeholder="Write a reply..."></textarea>
       <button class="btn btn-primary-gradient" type="button" data-action="submit-reply" data-comment-id="${escapeHtml(String(parentCommentId || ''))}">
         <i class="bi bi-send"></i>
       </button>
@@ -2073,15 +2124,16 @@ function toggleReplyForm(commentItem, postId, parentCommentId) {
   `;
 
   commentItem.querySelector('.comment-bubble')?.appendChild(replyForm);
-  replyForm.querySelector('input')?.focus();
+  replyForm.querySelector('.reply-composer-input')?.focus();
 
   // Attach emoji picker to reply input
   const replyInputGroup = replyForm.querySelector('.input-group');
-  const replyInputEl = replyForm.querySelector('input');
+  const replyInputEl = replyForm.querySelector('.reply-composer-input');
   attachEmojiPicker(replyInputGroup, replyInputEl);
 
-  replyForm.querySelector('input')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+  replyForm.querySelector('.reply-composer-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
       const submitBtn = replyForm.querySelector('[data-action="submit-reply"]');
       submitBtn?.click();
     }
@@ -2094,7 +2146,17 @@ function toggleReplies(commentItem) {
   const replies = commentItem.querySelector('.comment-replies');
   if (!replies) return;
 
-  replies.classList.toggle('d-none');
+  const toggleBtn = commentItem.querySelector('.comment-toggle-replies');
+  const replyCount = Number.parseInt(toggleBtn?.dataset.replyCount || '0', 10);
+  const safeReplyCount = Number.isFinite(replyCount) ? Math.max(0, replyCount) : 0;
+  const replyLabel = safeReplyCount === 1 ? 'reply' : 'replies';
+
+  const isCollapsed = replies.classList.toggle('d-none');
+
+  if (toggleBtn) {
+    toggleBtn.textContent = isCollapsed ? `View ${safeReplyCount} ${replyLabel}` : 'Hide replies';
+    toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+  }
 }
 
 function updateCommentReactionControl(commentSection, commentId, reactionState) {
@@ -2155,12 +2217,7 @@ async function submitReply(input, postId, parentCommentId, commentSection) {
   try {
     await createComment(postId, replyText, parentCommentId);
     input.value = '';
-
-    const postCard = commentSection.closest('.post-card');
-    const commentBtn = postCard.querySelector('[data-action="comment"] span');
-    if (commentBtn) {
-      commentBtn.textContent = parseInt(commentBtn.textContent, 10) + 1;
-    }
+    updatePostCommentCount(postId, 1);
 
     await loadComments(postId, commentSection);
   } catch (error) {
@@ -2171,14 +2228,18 @@ async function submitReply(input, postId, parentCommentId, commentSection) {
   }
 }
 
-function updatePostCommentCount(commentSection, delta) {
-  const postCard = commentSection?.closest('.post-card');
-  const commentBtn = postCard?.querySelector('[data-action="comment"] span');
-  if (!commentBtn) return;
+function updatePostCommentCount(postId, delta) {
+  if (!postId) return;
 
-  const current = parseInt(commentBtn.textContent, 10) || 0;
-  const next = Math.max(0, current + delta);
-  commentBtn.textContent = String(next);
+  const cards = document.querySelectorAll(`.post-card[data-post-id="${CSS.escape(String(postId))}"]`);
+  cards.forEach((postCard) => {
+    const commentBtn = postCard.querySelector('[data-action="comment"] span');
+    if (!commentBtn) return;
+
+    const current = parseInt(commentBtn.textContent, 10) || 0;
+    const next = Math.max(0, current + delta);
+    commentBtn.textContent = String(next);
+  });
 }
 
 async function handleDeleteComment(commentId, postId, commentSection) {
@@ -2187,7 +2248,7 @@ async function handleDeleteComment(commentId, postId, commentSection) {
 
   try {
     await deleteComment(commentId);
-    updatePostCommentCount(commentSection, -1);
+    updatePostCommentCount(postId, -1);
     await loadComments(postId, commentSection);
     showToast('Comment deleted.', 'info');
   } catch (error) {

@@ -491,6 +491,40 @@ hr,
 }
 
 /* ============================================
+   Comments Modal (Facebook-style)
+   ============================================ */
+.comments-modal .modal-dialog {
+	max-width: min(720px, 96vw);
+}
+
+.comments-modal .modal-content {
+	background: var(--card-bg);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-lg);
+	overflow: hidden;
+}
+
+.comments-modal .modal-body {
+	padding: 0;
+	max-height: calc(100vh - 110px);
+	overflow-y: auto;
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.comments-modal .modal-body::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
+
+.comments-modal .comments-modal-post-card {
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+/* ============================================
    Nav-link active / hover – warm tones
    ============================================ */
 .nav-link:hover {
