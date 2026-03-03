@@ -231,10 +231,6 @@
 }
 
 @media (max-width: 991.98px) {
-  #createPostCard {
-    display: none !important;
-  }
-
   body.mobile-x-ui,
   body.mobile-x-ui main {
     overflow-x: clip;
