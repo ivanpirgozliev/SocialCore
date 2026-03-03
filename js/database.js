@@ -1911,6 +1911,10 @@ export async function getConversationMessages(conversationId, limit = 50) {
         username,
         full_name,
         avatar_url
+      ),
+      message_reactions (
+        user_id,
+        reaction_type
       )
     `)
     .eq('conversation_id', conversationId)
@@ -1918,7 +1922,25 @@ export async function getConversationMessages(conversationId, limit = 50) {
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+
+  return (data || []).map((message) => {
+    const reactions = Array.isArray(message?.message_reactions) ? message.message_reactions : [];
+    const reactionCounts = reactions.reduce((acc, reaction) => {
+      const type = String(reaction?.reaction_type || '').trim();
+      if (!type) return acc;
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    const userReaction = reactions.find((reaction) => reaction?.user_id === user.id)?.reaction_type || null;
+
+    return {
+      ...message,
+      reaction_counts: reactionCounts,
+      reactions_total: reactions.length,
+      user_reaction: userReaction,
+    };
+  });
 }
 
 /**
@@ -1959,6 +1981,56 @@ export async function sendConversationMessage(conversationId, body) {
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Set or change a reaction for the current user on a message.
+ * @param {string} messageId
+ * @param {'like'|'love'|'haha'|'wow'|'sad'|'angry'} reactionType
+ */
+export async function setMessageReaction(messageId, reactionType) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const normalizedMessageId = String(messageId || '').trim();
+  const normalizedReactionType = String(reactionType || '').trim().toLowerCase();
+
+  if (!normalizedMessageId) throw new Error('Missing message id');
+  if (!normalizedReactionType) throw new Error('Missing reaction type');
+
+  const { error } = await supabase
+    .from('message_reactions')
+    .upsert([
+      {
+        message_id: normalizedMessageId,
+        user_id: user.id,
+        reaction_type: normalizedReactionType,
+      }
+    ], {
+      onConflict: 'message_id,user_id',
+    });
+
+  if (error) throw error;
+}
+
+/**
+ * Remove current user's reaction from a message.
+ * @param {string} messageId
+ */
+export async function clearMessageReaction(messageId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const normalizedMessageId = String(messageId || '').trim();
+  if (!normalizedMessageId) throw new Error('Missing message id');
+
+  const { error } = await supabase
+    .from('message_reactions')
+    .delete()
+    .eq('message_id', normalizedMessageId)
+    .eq('user_id', user.id);
+
+  if (error) throw error;
 }
 
 /**

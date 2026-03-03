@@ -1223,6 +1223,55 @@ function ensureMessagingDrawer() {
     }
   });
 
+  const drawerBody = drawer.querySelector('#messagingDrawerBody');
+  drawerBody.addEventListener('click', async (e) => {
+    const toggleBtn = e.target.closest('[data-message-reaction-action="toggle"]');
+    const setBtn = e.target.closest('[data-message-reaction-action="set"]');
+    const clearBtn = e.target.closest('[data-message-reaction-action="clear"]');
+
+    if (toggleBtn) {
+      const control = toggleBtn.closest('.message-reaction-control');
+      if (!control) return;
+
+      drawerBody.querySelectorAll('.message-reaction-control.is-open').forEach((el) => {
+        if (el !== control) el.classList.remove('is-open');
+      });
+
+      control.classList.toggle('is-open');
+      return;
+    }
+
+    if (!setBtn && !clearBtn) return;
+    if (!messagingDrawerState.conversationId) return;
+
+    const messageId = (setBtn || clearBtn)?.dataset?.messageId;
+    if (!messageId) return;
+
+    try {
+      const { setMessageReaction, clearMessageReaction } = await import('./database.js');
+
+      if (setBtn) {
+        const reactionType = setBtn.dataset.reactionType;
+        if (!reactionType) return;
+        await setMessageReaction(messageId, reactionType);
+      } else {
+        await clearMessageReaction(messageId);
+      }
+
+      await renderConversationView(messagingDrawerState.conversationId);
+    } catch (err) {
+      console.error(err);
+      showToast(err?.message || 'Failed to update message reaction', 'error');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#messagingDrawerBody .message-reaction-control')) return;
+    drawerBody.querySelectorAll('.message-reaction-control.is-open').forEach((el) => {
+      el.classList.remove('is-open');
+    });
+  });
+
   const form = drawer.querySelector('#messagingDrawerForm');
 
   // Attach emoji picker to messaging drawer input
@@ -1494,6 +1543,7 @@ async function renderConversationView(conversationId) {
     const { getConversationMessages, markConversationRead } = await import('./database.js');
     const messages = await getConversationMessages(conversationId, 60);
     const { renderTwemoji } = await import('./emoji-picker.js');
+    const { buildMessageReactionControlHtml, buildMessageReactionBadgeHtml } = await import('./message-reactions.js');
 
     // Attempt to set a nicer title from message participants
     const other = messages
@@ -1509,10 +1559,17 @@ async function renderConversationView(conversationId) {
         ${messages.length ? messages.map((m) => {
           const mine = userId && m.sender_id === userId;
           const bubbleClass = mine ? 'messaging-bubble messaging-bubble--mine' : 'messaging-bubble messaging-bubble--theirs';
+          const reactionControlHtml = buildMessageReactionControlHtml(m);
+          const reactionBadgeHtml = buildMessageReactionBadgeHtml(m);
           return `
             <div class="${mine ? 'd-flex justify-content-end' : 'd-flex justify-content-start'} mb-2">
-              <div class="${bubbleClass}">
-                <div class="small">${renderTwemoji(m.body)}</div>
+              <div class="message-row ${mine ? 'message-row--mine' : 'message-row--theirs'}">
+                ${mine ? reactionControlHtml : ''}
+                <div class="${bubbleClass}">
+                  <div class="small">${renderTwemoji(m.body)}</div>
+                  ${reactionBadgeHtml}
+                </div>
+                ${mine ? '' : reactionControlHtml}
               </div>
             </div>
           `;

@@ -7,9 +7,12 @@ import {
   getMyConversations,
   getConversationMessages,
   sendConversationMessage,
+  setMessageReaction,
+  clearMessageReaction,
   markConversationRead,
 } from './database.js';
 import { attachEmojiPicker, renderTwemoji } from './emoji-picker.js';
+import { buildMessageReactionControlHtml, buildMessageReactionBadgeHtml } from './message-reactions.js';
 
 let activeConversationId = null;
 let activeConversationOtherName = null;
@@ -139,10 +142,17 @@ async function initMessagesPage() {
         ? messages.map((m) => {
           const mine = currentUserId && m.sender_id === currentUserId;
           const bubbleClass = mine ? 'messaging-bubble messaging-bubble--mine' : 'messaging-bubble messaging-bubble--theirs';
+          const reactionControlHtml = buildMessageReactionControlHtml(m);
+          const reactionBadgeHtml = buildMessageReactionBadgeHtml(m);
           return `
             <div class="${mine ? 'd-flex justify-content-end' : 'd-flex justify-content-start'} mb-2">
-              <div class="${bubbleClass}">
-                <div class="small">${renderTwemoji(m.body)}</div>
+              <div class="message-row ${mine ? 'message-row--mine' : 'message-row--theirs'}">
+                ${mine ? reactionControlHtml : ''}
+                <div class="${bubbleClass}">
+                  <div class="small">${renderTwemoji(m.body)}</div>
+                  ${reactionBadgeHtml}
+                </div>
+                ${mine ? '' : reactionControlHtml}
               </div>
             </div>
           `;
@@ -222,6 +232,52 @@ async function initMessagesPage() {
       console.error(err);
       showToast(err?.message || 'Failed to send message', 'error');
     }
+  });
+
+  threadEl.addEventListener('click', async (e) => {
+    const toggleBtn = e.target.closest('[data-message-reaction-action="toggle"]');
+    const setBtn = e.target.closest('[data-message-reaction-action="set"]');
+    const clearBtn = e.target.closest('[data-message-reaction-action="clear"]');
+
+    if (toggleBtn) {
+      const control = toggleBtn.closest('.message-reaction-control');
+      if (!control) return;
+
+      threadEl.querySelectorAll('.message-reaction-control.is-open').forEach((el) => {
+        if (el !== control) el.classList.remove('is-open');
+      });
+
+      control.classList.toggle('is-open');
+      return;
+    }
+
+    if (!setBtn && !clearBtn) return;
+    if (!activeConversationId) return;
+
+    const messageId = (setBtn || clearBtn)?.dataset?.messageId;
+    if (!messageId) return;
+
+    try {
+      if (setBtn) {
+        const reactionType = setBtn.dataset.reactionType;
+        if (!reactionType) return;
+        await setMessageReaction(messageId, reactionType);
+      } else {
+        await clearMessageReaction(messageId);
+      }
+
+      await openConversation(activeConversationId);
+    } catch (err) {
+      console.error(err);
+      showToast(err?.message || 'Failed to update message reaction', 'error');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#messagesThread .message-reaction-control')) return;
+    threadEl.querySelectorAll('.message-reaction-control.is-open').forEach((el) => {
+      el.classList.remove('is-open');
+    });
   });
 
   // Realtime events from main.js
