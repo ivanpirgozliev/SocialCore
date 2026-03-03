@@ -738,8 +738,7 @@ hr,
 	}
 }
 
-.reaction-control.is-open .reaction-breakdown,
-.reaction-control:focus-within .reaction-breakdown {
+.reaction-control.is-open .reaction-breakdown {
 	display: block;
 }
 
@@ -817,8 +816,7 @@ hr,
 	padding: 0.25rem 0;
 }
 
-.reaction-control.is-open .reaction-picker,
-.reaction-control:focus-within .reaction-picker {
+.reaction-control.is-open .reaction-picker {
 	display: inline-flex;
 }
 
@@ -904,11 +902,13 @@ hr,
 	display: inline-block;
 	vertical-align: middle;
 	object-fit: contain;
+	pointer-events: none;
 }
 
 .reaction-picker-img {
 	width: 1.5rem;
 	height: 1.5rem;
+	pointer-events: none;
 }
 
 .reaction-btn-img {

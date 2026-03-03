@@ -2084,7 +2084,7 @@ function updateProfilePostReactionControl(postCard, reactionState) {
   const countEl = reactionBtn.querySelector('span:last-child');
   const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
 
-  if (emojiEl) emojiEl.textContent = reactionMeta.emoji;
+  if (emojiEl) emojiEl.innerHTML = reactionImg(reactionMeta.type, 'reaction-btn-img');
   if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
 
   reactionBtn.dataset.userReaction = reactionState?.user_reaction || '';
@@ -2103,6 +2103,9 @@ function updateProfilePostReactionControl(postCard, reactionState) {
 async function handlePostReactionSelect(postCard, postId, reactionType, reactionControl = null) {
   if (!postId || !reactionType) return;
 
+  // Close picker immediately
+  if (reactionControl) reactionControl.classList.remove('is-open');
+
   const reactionBtn = postCard?.querySelector('.post-action-btn[data-action="react-post"]');
   const currentReaction = String(reactionBtn?.dataset.userReaction || '').trim();
 
@@ -2115,7 +2118,6 @@ async function handlePostReactionSelect(postCard, postId, reactionType, reaction
 
     const reactionState = await getPostReactionState(postId);
     updateProfilePostReactionControl(postCard, reactionState);
-    if (reactionControl) reactionControl.classList.remove('is-open');
   } catch (error) {
     console.error('Error setting post reaction:', error);
     showToast('Failed to update reaction.', 'error');
@@ -2399,7 +2401,7 @@ function updateProfileCommentReactionControl(commentSection, commentId, reaction
   const countEl = reactionBtn.querySelector('span:last-child');
   const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
 
-  if (emojiEl) emojiEl.textContent = reactionMeta.emoji;
+  if (emojiEl) emojiEl.innerHTML = reactionImg(reactionMeta.type, 'reaction-btn-img');
   if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
 
   reactionBtn.dataset.userReaction = reactionState?.user_reaction || '';
@@ -2419,6 +2421,9 @@ function updateProfileCommentReactionControl(commentSection, commentId, reaction
 async function handleCommentReactionSelect(commentSection, commentId, reactionType, reactionControl = null) {
   if (!commentId || !reactionType) return;
 
+  // Close picker immediately
+  if (reactionControl) reactionControl.classList.remove('is-open');
+
   const reactionBtn = commentSection?.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(commentId))}"] .comment-action-btn[data-action="react-comment"]`);
   const currentReaction = String(reactionBtn?.dataset.userReaction || '').trim();
 
@@ -2431,7 +2436,6 @@ async function handleCommentReactionSelect(commentSection, commentId, reactionTy
 
     const reactionState = await getCommentReactionState(commentId);
     updateProfileCommentReactionControl(commentSection, commentId, reactionState);
-    if (reactionControl) reactionControl.classList.remove('is-open');
   } catch (error) {
     console.error('Error setting comment reaction:', error);
     showToast('Failed to update reaction.', 'error');

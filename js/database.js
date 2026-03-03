@@ -522,17 +522,19 @@ export async function setPostReaction(postId, reactionType = 'like') {
 
   const normalizedReaction = normalizeReactionType(reactionType);
 
+  // Delete existing reaction first (RLS has no UPDATE policy, so use DELETE + INSERT)
+  await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('post_id', postId);
+
   const { error } = await supabase
     .from('likes')
-    .upsert([
-      {
-        user_id: user.id,
-        post_id: postId,
-        reaction_type: normalizedReaction,
-      },
-    ], {
-      onConflict: 'user_id,post_id',
-      ignoreDuplicates: false,
+    .insert({
+      user_id: user.id,
+      post_id: postId,
+      reaction_type: normalizedReaction,
     });
 
   if (error) throw error;
@@ -548,17 +550,19 @@ export async function setCommentReaction(commentId, reactionType = 'like') {
 
   const normalizedReaction = normalizeReactionType(reactionType);
 
+  // Delete existing reaction first (RLS has no UPDATE policy, so use DELETE + INSERT)
+  await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('comment_id', commentId);
+
   const { error } = await supabase
     .from('likes')
-    .upsert([
-      {
-        user_id: user.id,
-        comment_id: commentId,
-        reaction_type: normalizedReaction,
-      },
-    ], {
-      onConflict: 'user_id,comment_id',
-      ignoreDuplicates: false,
+    .insert({
+      user_id: user.id,
+      comment_id: commentId,
+      reaction_type: normalizedReaction,
     });
 
   if (error) throw error;
