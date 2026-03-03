@@ -18,13 +18,20 @@ export async function createPost(postData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
+  const normalizedContent = String(postData?.content ?? '').trim();
+  const normalizedImageUrl = String(postData?.image_url ?? '').trim();
+
+  if (!normalizedContent && !normalizedImageUrl) {
+    throw new Error('Post must contain text or an image');
+  }
+
   const { data, error } = await supabase
     .from('posts')
     .insert([
       {
         user_id: user.id,
-        content: postData.content,
-        image_url: postData.image_url || null,
+        content: normalizedContent,
+        image_url: normalizedImageUrl || null,
       }
     ])
     .select(`
@@ -207,7 +214,12 @@ export async function updatePost(postId, updatesOrContent) {
     : { ...(updatesOrContent || {}) };
 
   const normalizedContent = String(payload.content ?? '').trim();
-  if (!normalizedContent) {
+  const hasImageField = Object.prototype.hasOwnProperty.call(payload, 'image_url');
+  const normalizedImageUrl = hasImageField
+    ? String(payload.image_url ?? '').trim()
+    : '';
+
+  if (!normalizedContent && (!hasImageField || !normalizedImageUrl)) {
     throw new Error('Post content cannot be empty');
   }
 
@@ -215,8 +227,8 @@ export async function updatePost(postId, updatesOrContent) {
     content: normalizedContent,
   };
 
-  if (Object.prototype.hasOwnProperty.call(payload, 'image_url')) {
-    updatePayload.image_url = payload.image_url || null;
+  if (hasImageField) {
+    updatePayload.image_url = normalizedImageUrl || null;
   }
 
   const { error } = await supabase
