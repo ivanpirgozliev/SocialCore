@@ -1224,6 +1224,16 @@ function ensureMessagingDrawer() {
   });
 
   const form = drawer.querySelector('#messagingDrawerForm');
+
+  // Attach emoji picker to messaging drawer input
+  const drawerInputGroup = form.querySelector('.input-group');
+  const drawerInput = form.querySelector('#messagingDrawerInput');
+  if (drawerInputGroup && drawerInput) {
+    import('./emoji-picker.js').then(({ attachEmojiPicker }) => {
+      attachEmojiPicker(drawerInputGroup, drawerInput);
+    });
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = drawer.querySelector('#messagingDrawerInput');
@@ -1483,6 +1493,7 @@ async function renderConversationView(conversationId) {
   try {
     const { getConversationMessages, markConversationRead } = await import('./database.js');
     const messages = await getConversationMessages(conversationId, 60);
+    const { renderTwemoji } = await import('./emoji-picker.js');
 
     // Attempt to set a nicer title from message participants
     const other = messages
@@ -1501,7 +1512,7 @@ async function renderConversationView(conversationId) {
           return `
             <div class="${mine ? 'd-flex justify-content-end' : 'd-flex justify-content-start'} mb-2">
               <div class="${bubbleClass}">
-                <div class="small">${escapeHtml(m.body)}</div>
+                <div class="small">${renderTwemoji(m.body)}</div>
               </div>
             </div>
           `;

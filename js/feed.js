@@ -6,6 +6,7 @@
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
 import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
+import { attachEmojiPicker, closeEmojiPicker, renderTwemoji } from './emoji-picker.js';
 
 const FEED_PAGE_SIZE = 10;
 const FEED_TAB_STORAGE_KEY = 'socialcore_feed_tab';
@@ -480,9 +481,9 @@ function createFeedPostHtml(post) {
       </div>
       <div class="post-content">
         ${contentHtml ? `<p class="mb-0">${contentHtml}</p>` : ''}
-        ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image mt-3" loading="lazy" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}" style="cursor: zoom-in;">` : ''}
         ${linkPreviewHtml}
       </div>
+      ${post?.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" loading="lazy" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}" style="cursor: zoom-in;">` : ''}
       <div class="post-actions">
         ${buildReactionControlHtml({
           targetType: 'post',
@@ -1251,7 +1252,7 @@ function renderFeedPostContent(postCard, content) {
 }
 
 function getFeedPostImageUrl(postCard) {
-  const imageEl = postCard?.querySelector('.post-content .post-image');
+  const imageEl = postCard?.querySelector('.post-image');
   if (!imageEl) return null;
   return imageEl.getAttribute('data-photo-viewer-url') || imageEl.getAttribute('src') || null;
 }
@@ -1260,7 +1261,7 @@ function renderFeedPostImage(postCard, imageUrl) {
   const contentContainer = postCard?.querySelector('.post-content');
   if (!contentContainer) return;
 
-  const existingImage = contentContainer.querySelector('.post-image');
+  const existingImage = postCard.querySelector('.post-image');
   const normalized = String(imageUrl || '').trim();
   const postId = String(postCard?.dataset?.postId || 'unknown');
   const gallery = `feed-post-${postId}`;
@@ -1283,12 +1284,12 @@ function renderFeedPostImage(postCard, imageUrl) {
   const imageEl = document.createElement('img');
   imageEl.src = normalized;
   imageEl.alt = 'Post image';
-  imageEl.className = 'post-image mt-3';
+  imageEl.className = 'post-image';
   imageEl.loading = 'lazy';
   imageEl.setAttribute('data-photo-viewer-url', normalized);
   imageEl.setAttribute('data-photo-gallery', gallery);
   imageEl.style.cursor = 'zoom-in';
-  contentContainer.appendChild(imageEl);
+  contentContainer.after(imageEl);
   renderFeedPostLinkPreview(postCard, getFeedPostContent(postCard));
 }
 
@@ -1297,7 +1298,7 @@ function renderFeedPostLinkPreview(postCard, content) {
   if (!contentContainer) return;
 
   const existingPreview = contentContainer.querySelector('.post-link-preview');
-  const hasImage = Boolean(contentContainer.querySelector('.post-image'));
+  const hasImage = Boolean(postCard.querySelector('.post-image'));
   const nextPreviewHtml = createPostLinkPreviewHtml(content, { hidden: hasImage });
 
   if (!nextPreviewHtml) {
@@ -1838,6 +1839,11 @@ function handleComment(button, postId) {
   const postActions = postCard.querySelector('.post-actions');
   postActions.after(commentSection);
 
+  // Attach emoji picker to comment input
+  const inputGroup = commentSection.querySelector('.input-group');
+  const commentInput = commentSection.querySelector('input');
+  attachEmojiPicker(inputGroup, commentInput);
+
   // Focus on input
   commentSection.querySelector('input').focus();
 
@@ -2017,7 +2023,7 @@ function renderCommentItem(comment, depth, postId) {
         <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
         <div class="comment-bubble">
           <strong class="d-block small">${escapeHtml(fullName)}</strong>
-          <span class="small comment-content-text">${escapeHtml(comment.content || '')}</span>
+          <span class="small comment-content-text">${renderTwemoji(comment.content || '')}</span>
           <div class="comment-actions">
             ${buildReactionControlHtml({
               targetType: 'comment',
@@ -2068,6 +2074,11 @@ function toggleReplyForm(commentItem, postId, parentCommentId) {
 
   commentItem.querySelector('.comment-bubble')?.appendChild(replyForm);
   replyForm.querySelector('input')?.focus();
+
+  // Attach emoji picker to reply input
+  const replyInputGroup = replyForm.querySelector('.input-group');
+  const replyInputEl = replyForm.querySelector('input');
+  attachEmojiPicker(replyInputGroup, replyInputEl);
 
   replyForm.querySelector('input')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {

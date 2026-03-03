@@ -8,9 +8,9 @@
    ============================================ */
 :root {
   /* Primary Colors */
-  --primary-blue: #2563EB;
-  --primary-cyan: #0891B2;
-  --primary-gradient: linear-gradient(135deg, #2563EB 0%, #0891B2 100%);
+  --primary-blue: #6a5e56;
+  --primary-cyan: #8a7e76;
+  --primary-gradient: linear-gradient(135deg, #6a5e56 0%, #8a7e76 100%);
   
   /* Neutral Colors */
   --gray-50: #F1F5F9;
@@ -28,7 +28,7 @@
   --success: #059669;
   --warning: #D97706;
   --danger: #DC2626;
-  --info: #2563EB;
+  --info: #6a5e56;
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -342,7 +342,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .nav-link.active {
   color: var(--primary-blue) !important;
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(106, 94, 86, 0.1);
 }
 
 .navbar-avatar {
@@ -491,7 +491,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .form-control:focus {
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(106, 94, 86, 0.12);
 }
 
 .form-label {
@@ -519,7 +519,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .birthday-picker .form-select:focus {
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(106, 94, 86, 0.12);
 }
 
 /* ============================================
@@ -532,7 +532,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px dashed var(--gray-300);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(8, 145, 178, 0.06));
+  background: linear-gradient(135deg, rgba(106, 94, 86, 0.06), rgba(106, 94, 86, 0.04));
   transition: var(--transition-fast);
 }
 
@@ -543,7 +543,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .upload-dropzone.is-dragover {
   border-color: var(--primary-blue);
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(8, 145, 178, 0.12));
+  background: linear-gradient(135deg, rgba(106, 94, 86, 0.12), rgba(106, 94, 86, 0.08));
   box-shadow: var(--shadow-lg);
   transform: translateY(-1px);
 }

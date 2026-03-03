@@ -9,6 +9,7 @@ import {
   sendConversationMessage,
   markConversationRead,
 } from './database.js';
+import { attachEmojiPicker, renderTwemoji } from './emoji-picker.js';
 
 let activeConversationId = null;
 let activeConversationOtherName = null;
@@ -45,6 +46,12 @@ async function initMessagesPage() {
 
   input.disabled = true;
   sendBtn.disabled = true;
+
+  // Attach emoji picker to messages input
+  const messagesInputGroup = form.querySelector('.input-group');
+  if (messagesInputGroup) {
+    attachEmojiPicker(messagesInputGroup, input);
+  }
 
   let allConversations = [];
 
@@ -135,7 +142,7 @@ async function initMessagesPage() {
           return `
             <div class="${mine ? 'd-flex justify-content-end' : 'd-flex justify-content-start'} mb-2">
               <div class="${bubbleClass}">
-                <div class="small">${escapeHtml(m.body)}</div>
+                <div class="small">${renderTwemoji(m.body)}</div>
               </div>
             </div>
           `;

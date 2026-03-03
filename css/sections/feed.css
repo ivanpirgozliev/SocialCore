@@ -40,8 +40,9 @@
 
 .post-image {
   width: 100%;
-  max-height: 500px;
-  object-fit: cover;
+  max-height: 700px;
+  object-fit: contain;
+  background-color: var(--gray-100, #e2e8f0);
 }
 
 .post-actions {
@@ -66,11 +67,11 @@
 
 .post-action-btn:hover {
   background-color: var(--gray-100);
-  color: var(--primary-blue);
+  color: var(--text-primary);
 }
 
 .post-action-btn.has-comments {
-  color: var(--primary-blue);
+  color: var(--text-primary);
 }
 
 .post-action-btn.liked {
@@ -172,11 +173,11 @@
 }
 
 .following-filter-chip.active {
-  color: var(--primary-blue);
+  color: var(--text-primary);
 }
 
 .following-filter-chip.active .following-filter-avatar {
-  border-color: var(--primary-blue);
+  border-color: var(--text-primary);
 }
 
 .following-filter-avatar {

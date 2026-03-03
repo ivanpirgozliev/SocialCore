@@ -6,6 +6,7 @@
 import { showToast, getStoredUser, refreshStoredUserFromProfile, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
 import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, updatePost, deletePost, uploadPostImage, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
+import { attachEmojiPicker, closeEmojiPicker, renderTwemoji } from './emoji-picker.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
 const USER_PHOTOS_FOLDER = 'photos';
@@ -1203,9 +1204,9 @@ function createPostCard(post) {
       </div>
       <div class="post-content">
         <p>${contentHtml}</p>
-        ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}">` : ''}
         ${linkPreviewHtml}
       </div>
+      ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" alt="Post image" class="post-image" data-photo-viewer-url="${escapeHtml(post.image_url)}" data-photo-gallery="${escapeHtml(postGallery)}">` : ''}
       <div class="post-actions">
         ${buildReactionControlHtml({
           targetType: 'post',
@@ -1713,7 +1714,7 @@ function renderProfilePostContent(postCard, content) {
 }
 
 function getProfilePostImageUrl(postCard) {
-  const imageEl = postCard?.querySelector('.post-content .post-image');
+  const imageEl = postCard?.querySelector('.post-image');
   if (!imageEl) return null;
   return imageEl.getAttribute('data-photo-viewer-url') || imageEl.getAttribute('src') || null;
 }
@@ -1722,7 +1723,7 @@ function renderProfilePostImage(postCard, imageUrl) {
   const contentContainer = postCard?.querySelector('.post-content');
   if (!contentContainer) return;
 
-  const existingImage = contentContainer.querySelector('.post-image');
+  const existingImage = postCard.querySelector('.post-image');
   const normalized = String(imageUrl || '').trim();
   const postId = String(postCard?.dataset?.postId || 'unknown');
   const gallery = `post-${postId}`;
@@ -1747,7 +1748,7 @@ function renderProfilePostImage(postCard, imageUrl) {
   imageEl.className = 'post-image';
   imageEl.setAttribute('data-photo-viewer-url', normalized);
   imageEl.setAttribute('data-photo-gallery', gallery);
-  contentContainer.appendChild(imageEl);
+  contentContainer.after(imageEl);
   renderProfilePostLinkPreview(postCard, getProfilePostContent(postCard));
 }
 
@@ -1756,7 +1757,7 @@ function renderProfilePostLinkPreview(postCard, content) {
   if (!contentContainer) return;
 
   const existingPreview = contentContainer.querySelector('.post-link-preview');
-  const hasImage = Boolean(contentContainer.querySelector('.post-image'));
+  const hasImage = Boolean(postCard.querySelector('.post-image'));
   const nextPreviewHtml = createPostLinkPreviewHtml(content, { hidden: hasImage });
 
   if (!nextPreviewHtml) {
@@ -2167,6 +2168,11 @@ function handleComment(button, postId) {
   const postActions = postCard.querySelector('.post-actions');
   postActions.after(commentSection);
 
+  // Attach emoji picker to comment input
+  const inputGroup = commentSection.querySelector('.input-group');
+  const commentInput = commentSection.querySelector('input');
+  attachEmojiPicker(inputGroup, commentInput);
+
   commentSection.querySelector('input')?.focus();
   loadComments(postId, commentSection);
 
@@ -2339,7 +2345,7 @@ function renderCommentItem(comment, depth) {
         <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(fullName)}" class="rounded-circle" width="30" height="30" loading="lazy">
         <div class="comment-bubble">
           <strong class="d-block small">${escapeHtml(fullName)}</strong>
-          <span class="small comment-content-text">${escapeHtml(comment.content || '')}</span>
+          <span class="small comment-content-text">${renderTwemoji(comment.content || '')}</span>
           <div class="comment-actions">
             ${buildReactionControlHtml({
               targetType: 'comment',
@@ -2384,6 +2390,11 @@ function toggleReplyForm(commentItem, postId, parentCommentId) {
 
   commentItem.querySelector('.comment-bubble')?.appendChild(replyForm);
   replyForm.querySelector('input')?.focus();
+
+  // Attach emoji picker to reply input
+  const replyInputGroup = replyForm.querySelector('.input-group');
+  const replyInputEl = replyForm.querySelector('input');
+  attachEmojiPicker(replyInputGroup, replyInputEl);
 
   replyForm.querySelector('input')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
