@@ -74,7 +74,8 @@
 }
 
 .post-action-btn.liked {
-  color: var(--danger);
+  color: var(--brand-primary);
+  font-weight: 500;
 }
 
 /* ============================================

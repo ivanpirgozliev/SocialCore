@@ -589,6 +589,20 @@ hr,
 	color: var(--text-primary) !important;
 }
 
+.post-action-btn.liked {
+	color: var(--brand-primary) !important;
+}
+
+.post-action-btn.liked .reaction-emoji {
+	animation: likedBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes likedBounce {
+	0% { transform: scale(0.5); }
+	50% { transform: scale(1.3); }
+	100% { transform: scale(1); }
+}
+
 .post-action-btn.has-comments {
 	color: var(--text-primary) !important;
 }
@@ -637,39 +651,89 @@ hr,
 }
 
 .reaction-emoji {
-	font-size: 0.95rem;
+	font-size: 1.05rem;
 	line-height: 1;
-	margin-right: 0.2rem;
+	margin-right: 0.25rem;
+	transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.post-action-btn:hover .reaction-emoji {
+	transform: scale(1.2);
+}
+
+/* --- Reaction Picker (floating emoji bar) --- */
 .reaction-picker {
 	position: absolute;
-	left: 0;
-	bottom: calc(100% + 0.35rem);
+	left: -0.5rem;
+	bottom: calc(100% + 0.5rem);
 	display: none;
 	align-items: center;
-	gap: 0.2rem;
-	padding: 0.25rem;
+	gap: 0.15rem;
+	padding: 0.4rem 0.55rem;
 	border-radius: 999px;
-	background: var(--card-bg);
-	border: 1px solid var(--border-soft);
-	box-shadow: var(--shadow-soft);
+	background: rgba(255, 255, 255, 0.92);
+	backdrop-filter: blur(16px) saturate(180%);
+	-webkit-backdrop-filter: blur(16px) saturate(180%);
+	border: 1px solid rgba(200, 185, 171, 0.35);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 	z-index: 20;
+	transform-origin: bottom left;
+	animation: reactionPickerIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+@keyframes reactionPickerIn {
+	0% {
+		opacity: 0;
+		transform: scale(0.6) translateY(6px);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+/* --- Reaction Breakdown (tooltip popup) --- */
 .reaction-breakdown {
 	position: absolute;
-	left: 0;
-	bottom: calc(100% + 2.9rem);
+	left: -0.5rem;
+	bottom: calc(100% + 3.4rem);
 	display: none;
-	min-width: 210px;
-	max-width: 270px;
-	padding: 0.45rem;
-	border-radius: 10px;
-	background: var(--card-bg);
-	border: 1px solid var(--border-soft);
-	box-shadow: var(--shadow-soft);
+	min-width: 220px;
+	max-width: 280px;
+	padding: 0.65rem 0.75rem;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.95);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid rgba(200, 185, 171, 0.3);
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05);
 	z-index: 21;
+	animation: breakdownFadeIn 0.22s ease-out forwards;
+}
+
+.reaction-breakdown::after {
+	content: '';
+	position: absolute;
+	bottom: -6px;
+	left: 1.2rem;
+	width: 12px;
+	height: 12px;
+	background: rgba(255, 255, 255, 0.95);
+	border-right: 1px solid rgba(200, 185, 171, 0.3);
+	border-bottom: 1px solid rgba(200, 185, 171, 0.3);
+	transform: rotate(45deg);
+	border-radius: 0 0 3px 0;
+}
+
+@keyframes breakdownFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .reaction-control.is-open .reaction-breakdown,
@@ -680,47 +744,75 @@ hr,
 .reaction-breakdown-summary {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
-	padding-bottom: 0.35rem;
-	margin-bottom: 0.35rem;
-	border-bottom: 1px solid var(--border-soft);
+	gap: 0.35rem;
+	padding-bottom: 0.45rem;
+	margin-bottom: 0.45rem;
+	border-bottom: 1px solid rgba(200, 185, 171, 0.25);
 }
 
 .reaction-breakdown-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.2rem;
-	font-size: 0.78rem;
-	padding: 0.15rem 0.35rem;
+	gap: 0.3rem;
+	font-size: 0.8rem;
+	font-weight: 500;
+	padding: 0.2rem 0.5rem;
 	border-radius: 999px;
-	background: var(--bg-soft);
+	background: rgba(216, 205, 193, 0.35);
 	color: var(--text-primary);
+	transition: background 0.2s ease;
+}
+
+.reaction-breakdown-chip:hover {
+	background: rgba(216, 205, 193, 0.55);
 }
 
 .reaction-breakdown-reactors {
 	display: flex;
 	flex-direction: column;
-	gap: 0.22rem;
-	max-height: 145px;
+	gap: 0.3rem;
+	max-height: 160px;
 	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-soft) transparent;
+}
+
+.reaction-breakdown-reactors::-webkit-scrollbar {
+	width: 4px;
+}
+
+.reaction-breakdown-reactors::-webkit-scrollbar-thumb {
+	background: var(--border-soft);
+	border-radius: 999px;
 }
 
 .reaction-breakdown-row {
 	display: flex;
 	align-items: center;
-	gap: 0.35rem;
-	font-size: 0.78rem;
+	gap: 0.45rem;
+	font-size: 0.82rem;
 	color: var(--text-primary);
+	padding: 0.15rem 0.1rem;
+	border-radius: 8px;
+	transition: background 0.15s ease;
+}
+
+.reaction-breakdown-row:hover {
+	background: rgba(216, 205, 193, 0.25);
 }
 
 .reaction-breakdown-emoji {
-	width: 1rem;
+	width: 1.15rem;
+	font-size: 0.95rem;
 	text-align: center;
+	flex-shrink: 0;
 }
 
 .reaction-breakdown-empty {
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	color: var(--text-secondary);
+	text-align: center;
+	padding: 0.25rem 0;
 }
 
 .reaction-control.is-open .reaction-picker,
@@ -728,24 +820,80 @@ hr,
 	display: inline-flex;
 }
 
+/* --- Individual Emoji Option Buttons --- */
 .reaction-option {
 	border: 0;
 	background: transparent;
-	width: 1.9rem;
-	height: 1.9rem;
+	width: 2.3rem;
+	height: 2.3rem;
 	border-radius: 999px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 1rem;
+	font-size: 1.35rem;
 	line-height: 1;
 	padding: 0;
+	cursor: pointer;
+	transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease;
+	position: relative;
 }
 
 .reaction-option:hover,
 .reaction-option:focus {
-	background: var(--bg-soft);
-	transform: translateY(-1px);
+	background: rgba(216, 205, 193, 0.4);
+	transform: scale(1.35) translateY(-4px);
 	outline: none;
+}
+
+.reaction-option:active {
+	transform: scale(1.15) translateY(-2px);
+}
+
+/* Staggered entry animation for each emoji */
+.reaction-picker .reaction-option:nth-child(1) { animation-delay: 0.02s; }
+.reaction-picker .reaction-option:nth-child(2) { animation-delay: 0.05s; }
+.reaction-picker .reaction-option:nth-child(3) { animation-delay: 0.08s; }
+.reaction-picker .reaction-option:nth-child(4) { animation-delay: 0.11s; }
+.reaction-picker .reaction-option:nth-child(5) { animation-delay: 0.14s; }
+.reaction-picker .reaction-option:nth-child(6) { animation-delay: 0.17s; }
+
+.reaction-picker .reaction-option {
+	animation: emojiPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes emojiPop {
+	0% {
+		opacity: 0;
+		transform: scale(0) translateY(8px);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+/* Tooltip label on hover */
+.reaction-option::after {
+	content: attr(aria-label);
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 50%;
+	transform: translateX(-50%) scale(0.8);
+	background: var(--gray-800);
+	color: #fff;
+	font-size: 0.68rem;
+	font-weight: 600;
+	padding: 0.2rem 0.45rem;
+	border-radius: 6px;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.15s ease, transform 0.15s ease;
+	z-index: 30;
+}
+
+.reaction-option:hover::after {
+	opacity: 1;
+	transform: translateX(-50%) scale(1);
 }
 
