@@ -654,6 +654,8 @@ hr,
 	font-size: 1.05rem;
 	line-height: 1;
 	margin-right: 0.25rem;
+	display: inline-flex;
+	align-items: center;
 	transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -895,5 +897,32 @@ hr,
 .reaction-option:hover::after {
 	opacity: 1;
 	transform: translateX(-50%) scale(1);
+}
+
+/* --- Twemoji image sizing --- */
+.reaction-img {
+	display: inline-block;
+	vertical-align: middle;
+	object-fit: contain;
+}
+
+.reaction-picker-img {
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+.reaction-btn-img {
+	width: 1.1rem;
+	height: 1.1rem;
+}
+
+.reaction-chip-img {
+	width: 0.95rem;
+	height: 0.95rem;
+}
+
+.reaction-row-img {
+	width: 1rem;
+	height: 1rem;
 }
 

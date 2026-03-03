@@ -36,14 +36,25 @@ let feedPostEditorState = {
   previewObjectUrl: null,
 };
 
+const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg';
+
 const REACTION_OPTIONS = [
-  { type: 'like', emoji: '👍', label: 'Like' },
-  { type: 'love', emoji: '❤️', label: 'Love' },
-  { type: 'haha', emoji: '😂', label: 'Haha' },
-  { type: 'wow', emoji: '😮', label: 'Wow' },
-  { type: 'sad', emoji: '😢', label: 'Sad' },
-  { type: 'angry', emoji: '😡', label: 'Angry' },
+  { type: 'like', emoji: '👍', label: 'Like', icon: `${TWEMOJI_BASE}/1f44d.svg` },
+  { type: 'love', emoji: '❤️', label: 'Love', icon: `${TWEMOJI_BASE}/2764.svg` },
+  { type: 'haha', emoji: '😂', label: 'Haha', icon: `${TWEMOJI_BASE}/1f602.svg` },
+  { type: 'wow', emoji: '😮', label: 'Wow', icon: `${TWEMOJI_BASE}/1f62e.svg` },
+  { type: 'sad', emoji: '😢', label: 'Sad', icon: `${TWEMOJI_BASE}/1f622.svg` },
+  { type: 'angry', emoji: '😡', label: 'Angry', icon: `${TWEMOJI_BASE}/1f621.svg` },
 ];
+
+const REACTION_ICON_MAP = Object.fromEntries(REACTION_OPTIONS.map(o => [o.type, o.icon]));
+const REACTION_EMOJI_TO_TYPE = Object.fromEntries(REACTION_OPTIONS.map(o => [o.emoji, o.type]));
+
+function reactionImg(typeOrEmoji, extraClass = '') {
+  const type = REACTION_EMOJI_TO_TYPE[typeOrEmoji] || typeOrEmoji || 'like';
+  const option = REACTION_OPTIONS.find(o => o.type === type) || REACTION_OPTIONS[0];
+  return `<img src="${option.icon}" alt="${option.emoji}" class="reaction-img ${extraClass}" draggable="false" loading="lazy">`;
+}
 
 function getReactionMeta(reactionType) {
   return REACTION_OPTIONS.find((option) => option.type === reactionType) || REACTION_OPTIONS[0];
@@ -61,7 +72,7 @@ function buildReactionPickerHtml({ targetType, targetId }) {
           data-reaction-type="${escapeHtml(option.type)}"
           title="${escapeHtml(option.label)}"
           aria-label="${escapeHtml(option.label)}"
-        >${option.emoji}</button>
+        >${reactionImg(option.type, 'reaction-picker-img')}</button>
       `).join('')}
     </div>
   `;
@@ -77,11 +88,11 @@ function buildReactionBreakdownHtml({ reactionCounts = {}, reactors = [] }) {
     .sort((a, b) => b.count - a.count);
 
   const summaryHtml = counts.length
-    ? `<div class="reaction-breakdown-summary">${counts.map((entry) => `<span class="reaction-breakdown-chip" title="${escapeHtml(entry.label)}">${entry.emoji} ${entry.count}</span>`).join('')}</div>`
+    ? `<div class="reaction-breakdown-summary">${counts.map((entry) => `<span class="reaction-breakdown-chip" title="${escapeHtml(entry.label)}">${reactionImg(entry.type, 'reaction-chip-img')} ${entry.count}</span>`).join('')}</div>`
     : '<div class="reaction-breakdown-empty">No reactions yet</div>';
 
   const reactorsHtml = (reactors || []).length
-    ? `<div class="reaction-breakdown-reactors">${reactors.slice(0, 8).map((reactor) => `<div class="reaction-breakdown-row"><span class="reaction-breakdown-emoji">${escapeHtml(String(reactor.reaction_emoji || '👍'))}</span><span>${escapeHtml(String(reactor.name || 'User'))}</span></div>`).join('')}</div>`
+    ? `<div class="reaction-breakdown-reactors">${reactors.slice(0, 8).map((reactor) => `<div class="reaction-breakdown-row"><span class="reaction-breakdown-emoji">${reactionImg(reactor.reaction_type || reactor.reaction_emoji || 'like', 'reaction-row-img')}</span><span>${escapeHtml(String(reactor.name || 'User'))}</span></div>`).join('')}</div>`
     : '';
 
   return `${summaryHtml}${reactorsHtml}`;
@@ -95,7 +106,7 @@ function buildReactionControlHtml({ targetType, targetId, count = 0, userReactio
   return `
     <div class="reaction-control">
       <button class="${baseClass} ${activeClass}" data-action="react-${targetType}" data-${targetType}-id="${escapeHtml(String(targetId || ''))}" data-user-reaction="${escapeHtml(String(userReaction || ''))}" title="${escapeHtml(tooltip)}" type="button" aria-label="React">
-        <span class="reaction-emoji" aria-hidden="true">${reaction.emoji}</span>
+        <span class="reaction-emoji" aria-hidden="true">${reactionImg(reaction.type, 'reaction-btn-img')}</span>
         <span>${Math.max(0, Number(count) || 0)}</span>
       </button>
       <div class="reaction-breakdown" role="tooltip">
