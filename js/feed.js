@@ -5,7 +5,7 @@
 
 import { showToast, formatRelativeTime, getStoredUser, refreshStoredUserFromProfile, refreshNotificationsMenu, initUserSearch, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
-import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage } from './database.js';
+import { getFeedPosts, getFollowingFeedPosts, getFollowingFeedAccounts, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, checkIsAdmin, getFriendSuggestions, getFriendRequests, getOutgoingFriendRequests, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, updatePost, deletePost, uploadPostImage, savePostForCurrentUser, unsavePostForCurrentUser } from './database.js';
 import { attachEmojiPicker, closeEmojiPicker, renderTwemoji } from './emoji-picker.js';
 
 const FEED_PAGE_SIZE = 10;
@@ -496,7 +496,7 @@ function createFeedPostHtml(post) {
             <i class="bi bi-three-dots"></i>
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><button type="button" class="dropdown-item" data-post-menu-action="save"><i class="bi bi-bookmark me-2"></i>Save Post</button></li>
+            ${buildFeedPostSaveMenuItemHtml(post?.id, Boolean(post?.saved_by_user))}
             <li><button type="button" class="dropdown-item" data-post-menu-action="report"><i class="bi bi-flag me-2"></i>Report</button></li>
             ${isOwnPost ? `
               <li><hr class="dropdown-divider"></li>
@@ -533,6 +533,82 @@ function createFeedPostHtml(post) {
       </div>
     </article>
   `;
+}
+
+function buildFeedPostSaveMenuItemHtml(postId, isSaved = false) {
+  const normalizedPostId = String(postId || '').trim();
+  const iconClass = isSaved ? 'bi-bookmark-check' : 'bi-bookmark';
+  const label = isSaved ? 'Unsave Post' : 'Save Post';
+
+  return `
+    <li>
+      <button type="button" class="dropdown-item" data-post-menu-action="save" data-post-id="${escapeHtml(normalizedPostId)}" data-post-saved="${isSaved ? 'true' : 'false'}" aria-pressed="${isSaved ? 'true' : 'false'}">
+        <i class="bi ${iconClass} me-2"></i>${label}
+      </button>
+    </li>
+  `;
+}
+
+function syncFeedPostSaveMenuButton(button, postId, isSaved) {
+  if (!button) return;
+
+  const normalizedPostId = String(postId || button.dataset.postId || '').trim();
+  if (!normalizedPostId) return;
+
+  button.dataset.postId = normalizedPostId;
+  button.dataset.postSaved = isSaved ? 'true' : 'false';
+  const iconClass = isSaved ? 'bi-bookmark-check' : 'bi-bookmark';
+  const label = isSaved ? 'Unsave Post' : 'Save Post';
+  button.innerHTML = `<i class="bi ${iconClass} me-2"></i>${label}`;
+  button.setAttribute('aria-pressed', isSaved ? 'true' : 'false');
+}
+
+function dispatchSavedPostsChanged(postId, isSaved) {
+  window.dispatchEvent(new CustomEvent('socialcore:saved-posts:changed', {
+    detail: {
+      postId: String(postId || ''),
+      isSaved: Boolean(isSaved),
+    },
+  }));
+}
+
+async function handleFeedPostMenuAction(action, postId, triggerButton) {
+  if (!action || !postId) return;
+
+  if (action === 'save') {
+    const isSaved = triggerButton?.dataset?.postSaved === 'true';
+
+    if (triggerButton) {
+      triggerButton.disabled = true;
+    }
+
+    try {
+      if (isSaved) {
+        await unsavePostForCurrentUser(postId);
+        syncFeedPostSaveMenuButton(triggerButton, postId, false);
+        dispatchSavedPostsChanged(postId, false);
+        showToast('Post removed from saved.', 'info');
+      } else {
+        await savePostForCurrentUser(postId);
+        syncFeedPostSaveMenuButton(triggerButton, postId, true);
+        dispatchSavedPostsChanged(postId, true);
+        showToast('Post saved.', 'success');
+      }
+    } catch (error) {
+      console.error('Error updating saved post:', error);
+      showToast('Failed to update saved post.', 'error');
+    } finally {
+      if (triggerButton) {
+        triggerButton.disabled = false;
+      }
+    }
+
+    return;
+  }
+
+  if (action === 'report') {
+    showToast('Post reported. We will review it shortly.', 'info');
+  }
 }
 
 function buildEmptyStateHtml({ title = 'No posts yet', description = 'Start following people or create your first post!' } = {}) {
@@ -1139,7 +1215,20 @@ function initPostActions() {
   }
 
   // Event delegation for post actions
-  postsFeed.addEventListener('click', (e) => {
+  postsFeed.addEventListener('click', async (e) => {
+    const postMenuActionBtn = e.target.closest('[data-post-menu-action]');
+    if (postMenuActionBtn && postsFeed.contains(postMenuActionBtn)) {
+      e.preventDefault();
+
+      const action = postMenuActionBtn.dataset.postMenuAction;
+      const postCard = postMenuActionBtn.closest('.post-card');
+      const postId = postMenuActionBtn.dataset.postId || postCard?.dataset?.postId;
+      if (!action || !postId) return;
+
+      await handleFeedPostMenuAction(action, postId, postMenuActionBtn);
+      return;
+    }
+
     const imageTrigger = e.target.closest('[data-photo-viewer-url]');
     if (imageTrigger && postsFeed.contains(imageTrigger)) {
       e.preventDefault();

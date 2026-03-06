@@ -18,6 +18,7 @@ export default defineConfig({
         messages: resolve(__dirname, 'pages/messages.html'),
         profile: resolve(__dirname, 'pages/profile.html'),
         photos: resolve(__dirname, 'pages/photos.html'),
+        savedPosts: resolve(__dirname, 'pages/saved-posts.html'),
         friends: resolve(__dirname, 'pages/friends.html'),
         createPost: resolve(__dirname, 'pages/create-post.html'),
         editProfile: resolve(__dirname, 'pages/edit-profile.html'),

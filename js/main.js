@@ -377,7 +377,7 @@ function initMobileXNavigation() {
       <a href="${escapeHtml(resolvePageHref('profile'))}" class="mobile-drawer-link">Profile</a>
       <a href="${escapeHtml(resolvePageHref('photos'))}" class="mobile-drawer-link">Photos</a>
       <a href="${escapeHtml(resolvePageHref('friends'))}" class="mobile-drawer-link">Friends</a>
-      <a href="#" class="mobile-drawer-link">Saved Posts</a>
+      <a href="${escapeHtml(resolvePageHref('saved-posts'))}" class="mobile-drawer-link">Saved Posts</a>
       <a href="#" class="mobile-drawer-link">Groups</a>
       <a href="#" class="mobile-drawer-link">Events</a>
     </nav>

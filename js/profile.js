@@ -5,7 +5,7 @@
 
 import { showToast, getStoredUser, refreshStoredUserFromProfile, resolveAvatarUrl } from './main.js';
 import { supabase } from './supabase.js';
-import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, updatePost, deletePost, uploadPostImage, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats } from './database.js';
+import { getProfile, getProfileIdByUsername, updateProfile, getUserPosts, followUser, unfollowUser, isFollowing, uploadProfileImage, checkIsAdmin, setPostReaction, clearPostReaction, getPostReactionState, createComment, getPostComments, setCommentReaction, clearCommentReaction, getCommentReactionState, updateComment, deleteComment, updatePost, deletePost, uploadPostImage, getFriendRelationship, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendsForUser, getProfileStats, savePostForCurrentUser, unsavePostForCurrentUser } from './database.js';
 import { attachEmojiPicker, closeEmojiPicker, renderTwemoji } from './emoji-picker.js';
 
 const PHOTOS_BUCKET_ID = 'post-images';
@@ -1217,17 +1217,20 @@ function createPostCard(post) {
           <div class="post-author">${post.profiles.full_name}</div>
           <div class="post-time">${relativeTime}</div>
         </div>
-        ${isOwnPost ? `
-          <div class="ms-auto">
-            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-three-dots"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
+        <div class="ms-auto">
+          <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            ${buildProfilePostSaveMenuItemHtml(post?.id, Boolean(post?.saved_by_user))}
+            <li><button type="button" class="dropdown-item" data-post-menu-action="report" data-post-id="${escapeHtml(String(post?.id || ''))}"><i class="bi bi-flag me-2"></i>Report</button></li>
+            ${isOwnPost ? `
+              <li><hr class="dropdown-divider"></li>
               <li><button type="button" class="dropdown-item" data-post-owner-action="edit"><i class="bi bi-pencil-square me-2"></i>Edit Post</button></li>
               <li><button type="button" class="dropdown-item text-danger" data-post-owner-action="delete"><i class="bi bi-trash3 me-2"></i>Delete Post</button></li>
-            </ul>
-          </div>
-        ` : ''}
+            ` : ''}
+          </ul>
+        </div>
       </div>
       <div class="post-content">
         <p>${contentHtml}</p>
@@ -1256,6 +1259,82 @@ function createPostCard(post) {
       </div>
     </div>
   `;
+}
+
+function buildProfilePostSaveMenuItemHtml(postId, isSaved = false) {
+  const normalizedPostId = String(postId || '').trim();
+  const iconClass = isSaved ? 'bi-bookmark-check' : 'bi-bookmark';
+  const label = isSaved ? 'Unsave Post' : 'Save Post';
+
+  return `
+    <li>
+      <button type="button" class="dropdown-item" data-post-menu-action="save" data-post-id="${escapeHtml(normalizedPostId)}" data-post-saved="${isSaved ? 'true' : 'false'}" aria-pressed="${isSaved ? 'true' : 'false'}">
+        <i class="bi ${iconClass} me-2"></i>${label}
+      </button>
+    </li>
+  `;
+}
+
+function syncProfilePostSaveMenuButton(button, postId, isSaved) {
+  if (!button) return;
+
+  const normalizedPostId = String(postId || button.dataset.postId || '').trim();
+  if (!normalizedPostId) return;
+
+  button.dataset.postId = normalizedPostId;
+  button.dataset.postSaved = isSaved ? 'true' : 'false';
+  const iconClass = isSaved ? 'bi-bookmark-check' : 'bi-bookmark';
+  const label = isSaved ? 'Unsave Post' : 'Save Post';
+  button.innerHTML = `<i class="bi ${iconClass} me-2"></i>${label}`;
+  button.setAttribute('aria-pressed', isSaved ? 'true' : 'false');
+}
+
+function dispatchSavedPostsChanged(postId, isSaved) {
+  window.dispatchEvent(new CustomEvent('socialcore:saved-posts:changed', {
+    detail: {
+      postId: String(postId || ''),
+      isSaved: Boolean(isSaved),
+    },
+  }));
+}
+
+async function handleProfilePostMenuAction(action, postId, button) {
+  if (!action || !postId) return;
+
+  if (action === 'save') {
+    const isSaved = button?.dataset?.postSaved === 'true';
+
+    if (button) {
+      button.disabled = true;
+    }
+
+    try {
+      if (isSaved) {
+        await unsavePostForCurrentUser(postId);
+        syncProfilePostSaveMenuButton(button, postId, false);
+        dispatchSavedPostsChanged(postId, false);
+        showToast('Post removed from saved.', 'info');
+      } else {
+        await savePostForCurrentUser(postId);
+        syncProfilePostSaveMenuButton(button, postId, true);
+        dispatchSavedPostsChanged(postId, true);
+        showToast('Post saved.', 'success');
+      }
+    } catch (error) {
+      console.error('Error updating saved post:', error);
+      showToast('Failed to update saved post.', 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+      }
+    }
+
+    return;
+  }
+
+  if (action === 'report') {
+    showToast('Post reported. We will review it shortly.', 'info');
+  }
 }
 
 /**
@@ -1622,6 +1701,16 @@ function initPostActions() {
   profilePosts.forEach((postCard) => {
     const postId = postCard.dataset.postId;
 
+    postCard.querySelectorAll('[data-post-menu-action]').forEach((menuBtn) => {
+      menuBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        const action = menuBtn.dataset.postMenuAction;
+        const resolvedPostId = menuBtn.dataset.postId || postId;
+        if (!action || !resolvedPostId) return;
+        await handleProfilePostMenuAction(action, resolvedPostId, menuBtn);
+      });
+    });
+
     const ownerEditBtn = postCard.querySelector('[data-post-owner-action="edit"]');
     if (ownerEditBtn) {
       ownerEditBtn.addEventListener('click', () => {
@@ -1666,6 +1755,7 @@ function initPostActions() {
       });
     }
   });
+
 }
 
 function initCommentOverlayDismiss() {

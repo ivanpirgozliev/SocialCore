@@ -191,6 +191,126 @@ export async function getUserPosts(userId, limit = 20) {
 }
 
 /**
+ * Get posts by a set of post ids
+ * @param {string[]} postIds - Post ids to fetch
+ * @returns {Promise<Array>} Array of posts
+ */
+export async function getPostsByIds(postIds = []) {
+  const normalizedIds = Array.from(new Set((postIds || [])
+    .map((id) => String(id || '').trim())
+    .filter(Boolean)));
+
+  if (!normalizedIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      *,
+      profiles:user_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      comments:comments(count),
+      likes:likes(count)
+    `)
+    .in('id', normalizedIds)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return hydratePostLikeState(data || []);
+}
+
+/**
+ * Save a post for the currently authenticated user
+ * @param {string} postId - Post ID
+ */
+export async function savePostForCurrentUser(postId) {
+  const normalizedPostId = String(postId || '').trim();
+  if (!normalizedPostId) throw new Error('Post id is required');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('saved_posts')
+    .upsert([
+      {
+        user_id: user.id,
+        post_id: normalizedPostId,
+      },
+    ], {
+      onConflict: 'user_id,post_id',
+      ignoreDuplicates: false,
+    });
+
+  if (error) throw error;
+}
+
+/**
+ * Remove a saved post for the currently authenticated user
+ * @param {string} postId - Post ID
+ */
+export async function unsavePostForCurrentUser(postId) {
+  const normalizedPostId = String(postId || '').trim();
+  if (!normalizedPostId) throw new Error('Post id is required');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('saved_posts')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('post_id', normalizedPostId);
+
+  if (error) throw error;
+}
+
+/**
+ * Get saved posts feed for the currently authenticated user
+ * @returns {Promise<Array>} Array of posts with saved_at
+ */
+export async function getSavedPostsFeed() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('saved_posts')
+    .select('post_id, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const entries = (data || [])
+    .map((row) => ({
+      postId: String(row?.post_id || '').trim(),
+      savedAt: row?.created_at || null,
+    }))
+    .filter((row) => row.postId);
+
+  if (!entries.length) return [];
+
+  const posts = await getPostsByIds(entries.map((entry) => entry.postId));
+  const postsById = new Map((posts || []).map((post) => [String(post?.id || ''), post]));
+
+  return entries
+    .map((entry) => {
+      const post = postsById.get(entry.postId);
+      if (!post) return null;
+      return {
+        ...post,
+        saved_at: entry.savedAt,
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
  * Delete a post
  * @param {string} postId - Post ID
  */
@@ -696,13 +816,33 @@ async function hydratePostLikeState(posts) {
 
   const reactionMap = buildReactionMap(likesData || [], 'post_id');
 
+  let savedPostIdSet = new Set();
+  if (currentUserId) {
+    try {
+      const { data: savedRows, error: savedError } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', currentUserId)
+        .in('post_id', postIds);
+
+      if (!savedError && Array.isArray(savedRows)) {
+        savedPostIdSet = new Set(savedRows.map((row) => String(row?.post_id || '').trim()).filter(Boolean));
+      }
+    } catch {
+      // ignore saved post lookup issues and fallback to unsaved
+    }
+  }
+
   return normalized.map((post) => {
     const reactionSummary = buildReactionSummary(reactionMap.get(post.id) || [], currentUserId);
+    const postId = String(post?.id || '').trim();
+
     return {
       ...post,
       likes_count: reactionSummary.reactions_total,
       ...reactionSummary,
       liked_by_user: reactionSummary.reacted_by_user,
+      saved_by_user: savedPostIdSet.has(postId),
     };
   });
 }

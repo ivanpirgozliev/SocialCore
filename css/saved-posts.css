@@ -1,0 +1,17 @@
+.saved-posts-header-card {
+  border: 1px solid #d4ccd5;
+}
+
+.saved-posts-feed .post-card {
+  margin-bottom: 1rem;
+}
+
+.saved-post-meta {
+  font-size: 0.8rem;
+  color: #7a7078;
+}
+
+.saved-post-actions {
+  border-top: 1px solid #ece4ee;
+  padding-top: 0.75rem;
+}
