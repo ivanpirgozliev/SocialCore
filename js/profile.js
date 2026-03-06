@@ -66,6 +66,28 @@ function getReactionMeta(reactionType) {
   return REACTION_OPTIONS.find((option) => option.type === reactionType) || REACTION_OPTIONS[0];
 }
 
+function resolveDisplayedReactionType(userReaction = null, reactionCounts = {}, reactors = []) {
+  if (userReaction) {
+    return userReaction;
+  }
+
+  const topReaction = REACTION_OPTIONS
+    .map((option) => ({
+      type: option.type,
+      count: Number(reactionCounts?.[option.type]) || 0,
+    }))
+    .sort((a, b) => b.count - a.count)[0];
+
+  if (topReaction?.count > 0) {
+    return topReaction.type;
+  }
+
+  const firstReactorType = reactors.find((reactor) => reactor?.reaction_type || reactor?.reaction_emoji)?.reaction_type
+    || reactors.find((reactor) => reactor?.reaction_type || reactor?.reaction_emoji)?.reaction_emoji;
+
+  return firstReactorType || 'like';
+}
+
 function buildReactionPickerHtml({ targetType, targetId }) {
   return `
     <div class="reaction-picker" role="menu" aria-label="Choose reaction">
@@ -105,7 +127,8 @@ function buildReactionBreakdownHtml({ reactionCounts = {}, reactors = [] }) {
 }
 
 function buildReactionControlHtml({ targetType, targetId, count = 0, userReaction = null, tooltip = 'No reactions yet', reactionCounts = {}, reactors = [], baseClass = 'post-action-btn' }) {
-  const reaction = getReactionMeta(userReaction || 'like');
+  const displayedReactionType = resolveDisplayedReactionType(userReaction, reactionCounts, reactors);
+  const reaction = getReactionMeta(displayedReactionType);
   const activeClass = userReaction ? 'liked' : '';
   const breakdownHtml = buildReactionBreakdownHtml({ reactionCounts, reactors });
 
@@ -2087,7 +2110,12 @@ function updateProfilePostReactionControl(postCard, reactionState) {
 
   const emojiEl = reactionBtn.querySelector('.reaction-emoji');
   const countEl = reactionBtn.querySelector('span:last-child');
-  const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
+  const displayedReactionType = resolveDisplayedReactionType(
+    reactionState?.user_reaction || null,
+    reactionState?.reaction_counts || {},
+    reactionState?.reactors || []
+  );
+  const reactionMeta = getReactionMeta(displayedReactionType);
 
   if (emojiEl) emojiEl.innerHTML = reactionImg(reactionMeta.type, 'reaction-btn-img');
   if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
@@ -2471,7 +2499,12 @@ function updateProfileCommentReactionControl(commentSection, commentId, reaction
 
   const emojiEl = reactionBtn.querySelector('.reaction-emoji');
   const countEl = reactionBtn.querySelector('span:last-child');
-  const reactionMeta = getReactionMeta(reactionState?.user_reaction || 'like');
+  const displayedReactionType = resolveDisplayedReactionType(
+    reactionState?.user_reaction || null,
+    reactionState?.reaction_counts || {},
+    reactionState?.reactors || []
+  );
+  const reactionMeta = getReactionMeta(displayedReactionType);
 
   if (emojiEl) emojiEl.innerHTML = reactionImg(reactionMeta.type, 'reaction-btn-img');
   if (countEl) countEl.textContent = String(Math.max(0, Number(reactionState?.reactions_total) || 0));
