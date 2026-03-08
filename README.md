@@ -65,6 +65,38 @@ Main tables:
 - Personalization: `saved_posts`
 - Access control: `user_roles`
 
+### ER Diagram
+
+```mermaid
+erDiagram
+	AUTH_USERS ||--|| PROFILES : "creates profile"
+	AUTH_USERS ||--o| USER_ROLES : "can have role"
+
+	PROFILES ||--o{ POSTS : creates
+	PROFILES ||--o{ COMMENTS : writes
+	POSTS ||--o{ COMMENTS : contains
+
+	PROFILES ||--o{ LIKES : gives
+	POSTS ||--o{ LIKES : receives
+	COMMENTS ||--o{ LIKES : receives
+
+	PROFILES ||--o{ FOLLOWS : follower_id
+	PROFILES ||--o{ FOLLOWS : following_id
+
+	PROFILES ||--o{ FRIEND_REQUESTS : requester_id
+	PROFILES ||--o{ FRIEND_REQUESTS : addressee_id
+
+	CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : has
+	PROFILES ||--o{ CONVERSATION_PARTICIPANTS : joins
+	CONVERSATIONS ||--o{ MESSAGES : contains
+	PROFILES ||--o{ MESSAGES : sends
+	MESSAGES ||--o{ MESSAGE_REACTIONS : has
+	PROFILES ||--o{ MESSAGE_REACTIONS : reacts
+
+	PROFILES ||--o{ SAVED_POSTS : saves
+	POSTS ||--o{ SAVED_POSTS : is_saved
+```
+
 Current migration sets:
 
 - `database/migrations/` contains 24 SQL files for the manual/reference workflow
