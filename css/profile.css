@@ -56,11 +56,11 @@
 
 @media (max-width: 575.98px) {
 	body.mobile-x-ui .profile-stats {
-		display: flex !important;
-		flex-direction: row !important;
-		justify-content: center;
-		align-items: center;
-		gap: var(--spacing-lg);
+		display: grid !important;
+		grid-template-columns: 1fr !important;
+		justify-content: stretch;
+		align-items: stretch;
+		gap: var(--spacing-md);
 	}
 }
 
