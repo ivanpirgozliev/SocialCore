@@ -1249,7 +1249,7 @@ function createPostCard(post) {
           baseClass: 'post-action-btn',
         })}
         <button class="post-action-btn ${commentClass}" data-action="comment">
-          <i class="bi bi-chat"></i>
+          <i class="bi bi-chat-left-text"></i>
           <span>${commentsCount}</span>
         </button>
         <button class="post-action-btn" data-action="share">

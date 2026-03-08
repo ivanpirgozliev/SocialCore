@@ -523,7 +523,7 @@ function createFeedPostHtml(post) {
           baseClass: 'post-action-btn',
         })}
         <button class="post-action-btn ${commentClass}" data-action="comment" type="button" aria-label="Comment">
-          <i class="bi bi-chat"></i>
+          <i class="bi bi-chat-left-text"></i>
           <span>${commentsCount}</span>
         </button>
         <button class="post-action-btn" data-action="share" type="button" aria-label="Share">
