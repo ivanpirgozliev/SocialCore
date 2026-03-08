@@ -368,8 +368,8 @@ function createPostRow(post) {
           <span>${authorName}</span>
         </div>
       </td>
-      <td><span class="badge bg-primary bg-opacity-10 text-primary">${post.likes_count || 0}</span></td>
-      <td><span class="badge bg-success bg-opacity-10 text-success">${post.comments_count || 0}</span></td>
+      <td><span class="badge bg-primary bg-opacity-10 admin-post-count-badge admin-post-count-badge-likes">${post.likes_count || 0}</span></td>
+      <td><span class="badge bg-success bg-opacity-10 admin-post-count-badge admin-post-count-badge-comments">${post.comments_count || 0}</span></td>
       <td>${date}</td>
       <td class="text-end pe-4">
         <div class="btn-group btn-group-sm">

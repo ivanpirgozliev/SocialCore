@@ -72,3 +72,11 @@
 	border-color: var(--border-soft);
 }
 
+#postsTable .admin-post-count-badge-likes {
+	color: #ffffff;
+}
+
+#postsTable .admin-post-count-badge-comments {
+	color: #6a5e56;
+}
+
