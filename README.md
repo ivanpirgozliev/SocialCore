@@ -1,125 +1,114 @@
 # SocialCore
 
-SocialCore is a multi-page social networking web app where users can register, create posts, interact with content, build connections, and chat.
+SocialCore is a multi-page social networking application built with Vite, vanilla JavaScript, Bootstrap 5, and Supabase. It includes authentication, a feed, profiles, follows, friend requests, direct messaging, saved posts, admin tooling, and a Supabase-backed database with RLS policies.
 
-## Project Description
+## Feature Overview
 
-SocialCore provides a classic social platform flow:
+- Public landing page with dedicated login and register flows
+- User profiles with editable personal details and profile media
+- Feed with post creation, image-only posts, comments, threaded replies, and reactions
+- Social graph features: follows, friend requests, accepted friends, saved posts
+- Direct messaging with conversation creation, unread count support, and message reactions
+- Admin area backed by protected Supabase Edge Functions for user management and moderation workflows
 
-- Public users (guests) can view the landing page and access login/register pages.
-- Authenticated users can:
-  - manage profile data,
-  - create/edit/delete their own posts,
-  - like posts and comments,
-  - write comments and threaded replies,
-  - follow users,
-  - send/accept/decline friend requests,
-  - use direct messaging.
-- Admin users can:
-  - manage platform users through admin tools,
-  - moderate comments,
-  - use protected Supabase Edge Functions for user administration.
+## Tech Stack
 
-## Architecture
+- Frontend: HTML5, CSS3, vanilla JavaScript ES modules, Bootstrap 5, Bootstrap Icons
+- Build tooling: Vite 5 multi-page configuration
+- Backend: Supabase Auth, Supabase Postgres, Row Level Security, SQL RPC/functions, Edge Functions
+- Data layer: shared browser-side helpers in `js/database.js`
 
-### Front-end
+## Application Structure
 
-- **Type:** Multi-Page Application (MPA)
-- **Build tool:** Vite (`vite.config.js` with multiple page entry points)
-- **UI:** Bootstrap 5 + Bootstrap Icons + custom CSS
-- **Client code:** Vanilla JavaScript ES modules in `js/`
-- **Pages:** Separate HTML files in `pages/`, each wired to its own module
+### Multi-page app
 
-### Back-end / BaaS
+The app uses Vite in MPA mode. Each HTML page has its own JavaScript module.
 
-- **Platform:** Supabase
-- **Auth:** Supabase Auth (`auth.users`)
-- **Database:** Supabase Postgres with Row Level Security (RLS)
-- **Server-side logic:**
-  - SQL functions/RPC (e.g. unread counts, direct conversation creation)
-  - Triggers for counters, timestamps, and friendship-follow syncing
-  - Supabase Edge Functions for admin user operations (`create-user`, `list-users`, `edit-user`, `delete-user`)
+Available pages:
 
-### Data Access Pattern
+- `index.html` - landing page
+- `pages/login.html`
+- `pages/register.html`
+- `pages/feed.html`
+- `pages/messages.html`
+- `pages/profile.html`
+- `pages/photos.html`
+- `pages/saved-posts.html`
+- `pages/friends.html`
+- `pages/create-post.html`
+- `pages/edit-profile.html`
+- `pages/settings.html`
+- `pages/admin.html`
 
-- Front-end modules call helper methods from `js/database.js`.
-- `js/supabase.js` initializes the Supabase client using Vite env vars.
-- Security is enforced in Postgres (RLS policies + role checks), not only in UI.
+### Frontend organization
 
-## Database Schema Design
+- `js/` contains page modules and shared helpers
+- `css/` contains global, page-specific, and section styles
+- `assets/` contains images and background video assets
+- `vite.config.js` defines all page entry points and local dev settings
 
-The schema is centered around profiles, content, social graph, moderation roles, and messaging.
+### Supabase integration
 
-### Main Tables
+- `js/supabase.js` creates the browser client from Vite environment variables
+- `js/database.js` contains the main async helpers for posts, comments, follows, friends, messaging, reactions, and saved posts
+- Security is enforced primarily in Supabase through RLS policies, constraints, triggers, and RPC functions
 
-- **Core social:** `profiles`, `posts`, `comments`, `likes`, `follows`
-- **Friendship:** `friend_requests`
-- **Messaging:** `conversations`, `conversation_participants`, `messages`
-- **Access control:** `user_roles`
+## Database Overview
 
-### ER Diagram (Main Relationships)
+The current schema covers core social content, relationships, messaging, moderation, and saved content.
 
-```mermaid
-erDiagram
-    AUTH_USERS ||--|| PROFILES : "id"
+Main tables:
 
-    PROFILES ||--o{ POSTS : creates
-    PROFILES ||--o{ COMMENTS : writes
-    POSTS ||--o{ COMMENTS : has
+- Core social: `profiles`, `posts`, `comments`, `likes`, `follows`
+- Friendship: `friend_requests`
+- Messaging: `conversations`, `conversation_participants`, `messages`, `message_reactions`
+- Personalization: `saved_posts`
+- Access control: `user_roles`
 
-    PROFILES ||--o{ LIKES : gives
-    POSTS ||--o{ LIKES : receives
-    COMMENTS ||--o{ LIKES : receives
+Current migration sets:
 
-    PROFILES ||--o{ FOLLOWS : follower_id
-    PROFILES ||--o{ FOLLOWS : following_id
+- `database/migrations/` contains 24 SQL files for the manual/reference workflow
+- `supabase/migrations/` contains the Supabase CLI migration history used by `supabase db push`
 
-    PROFILES ||--o{ FRIEND_REQUESTS : requester_id
-    PROFILES ||--o{ FRIEND_REQUESTS : addressee_id
+Notable schema behavior:
 
-    PROFILES ||--o{ CONVERSATION_PARTICIPANTS : joins
-    CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : includes
-    CONVERSATIONS ||--o{ MESSAGES : contains
-    PROFILES ||--o{ MESSAGES : sends
+- Automatic profile creation after signup
+- Threaded comments via `parent_comment_id`
+- Reactions on both likes and messages
+- Mutual follow sync on accepted friend requests
+- RPC helpers for unread counts and direct-conversation creation
 
-    AUTH_USERS ||--|| USER_ROLES : has
-```
+See `database/schema-diagram.md` for the schema overview.
 
-### Notes
-
-- `likes` supports post-like and comment-like behavior (polymorphic via `post_id` or `comment_id`).
-- `comments` supports threaded replies through `parent_comment_id`.
-- `friend_requests` with status `accepted` triggers mutual follow records.
-- `conversations` supports direct messaging and participant-based access.
-- Most content tables use UUID primary keys, timestamps, constraints, indexes, and RLS.
-
-## Local Development Setup Guide
+## Local Setup
 
 ### Prerequisites
 
 - Node.js 18+
 - npm
-- Supabase project (cloud)
-- Optional: Supabase CLI for migration workflow
+- A Supabase project
+- Optional: Supabase CLI for the recommended migration workflow
 
-### 1) Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2) Configure environment variables
+### 2. Create environment variables
 
-Create `.env` in project root:
+Create a `.env` file in the project root:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 3) Apply database migrations
+If either variable is missing, the app will fail fast during client initialization.
 
-**Recommended (CLI):**
+### 3. Apply database migrations
+
+Recommended Supabase CLI workflow:
 
 ```bash
 npx supabase login
@@ -127,49 +116,72 @@ npx supabase link --project-ref your-project-ref
 npx supabase db push
 ```
 
-Migrations are available in both:
+Alternative manual workflow:
 
-- `supabase/migrations/` (CLI-first workflow)
-- `database/migrations/` (manual SQL workflow reference)
+- Execute the SQL files in `database/migrations/` in order through Supabase SQL Editor
+- Or run `database/EXECUTE_THIS_IN_SUPABASE.sql` if you are using the consolidated manual setup path
 
-### 4) Run the app locally
+### 4. Start the development server
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+The app runs at `http://localhost:3000`.
 
-### 5) Useful scripts
+### 5. Production build and preview
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Key Folders and Files
+## Available Scripts
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Start the Vite dev server on port 3000 |
+| `npm run build` | Build the multi-page app into `dist/` |
+| `npm run preview` | Preview the production build locally |
+
+## Key Directories
 
 | Path | Purpose |
 |---|---|
-| `index.html` | Landing page entry point (public home) |
-| `pages/` | App pages (login, register, feed, profile, friends, messages, admin, etc.) |
-| `js/` | Page modules + shared client logic |
-| `js/main.js` | Shared UI utilities (toasts, helpers, common behavior) |
-| `js/database.js` | Main data access layer (posts, comments, likes, follows, friends, messaging) |
-| `js/supabase.js` | Supabase client initialization from env vars |
-| `css/` | Stylesheets (global and per-page styling) |
-| `assets/` | Static assets (images, video, icons) |
-| `database/migrations/` | SQL migration scripts (reference/manual execution path) |
+| `index.html` | Public landing page entry |
+| `pages/` | Feature pages for the app |
+| `js/` | Page scripts, shared UI helpers, and data-access helpers |
+| `css/` | Global, page-level, and section-level styles |
+| `assets/` | Images and background video assets |
+| `database/migrations/` | Manual/reference SQL migrations |
 | `database/schema-diagram.md` | ASCII schema overview |
 | `supabase/migrations/` | Supabase CLI migration history |
-| `supabase/functions/` | Edge Functions for admin user management |
-| `vite.config.js` | Vite config + multi-page build inputs |
-| `SUPABASE_SETUP.md` | Detailed Supabase setup instructions |
-| `QUICK_START.md` | Short setup/testing flow |
+| `supabase/functions/` | Edge Functions for admin operations |
+| `SUPABASE_SETUP.md` | Detailed Supabase setup guide |
+| `QUICK_START.md` | Short setup and smoke-test guide |
+| `MIGRATION_CHECKLIST.md` | Migration validation notes |
 
-## Technology Summary
+## Edge Functions
 
-- **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES modules), Bootstrap 5
-- **Build tooling:** Vite
-- **Backend services:** Supabase Auth, Postgres, RLS, Edge Functions
-- **Database language:** SQL (migrations, policies, RPC functions, triggers)
+The `supabase/functions/` directory currently includes admin-oriented functions:
+
+- `create-user`
+- `list-users`
+- `edit-user`
+- `delete-user`
+
+These are intended for protected admin workflows rather than direct public access.
+
+## Development Notes
+
+- The app is intentionally organized as a vanilla-JS MPA rather than a SPA
+- Relative asset paths differ between the project root and files inside `pages/`
+- Bootstrap utilities are extended with custom CSS rather than replaced wholesale
+- There is currently no automated test script in `package.json`; validation is mainly through local app flows and database checks
+
+## Additional Docs
+
+- `SUPABASE_SETUP.md` for a longer setup walkthrough
+- `QUICK_START.md` for a short start-to-finish setup checklist
+- `database/schema-diagram.md` for the schema overview
+- `MIGRATION_CHECKLIST.md` for migration verification steps
